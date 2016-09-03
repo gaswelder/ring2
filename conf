@@ -1,0 +1,23 @@
+# Test configuration
+
+server {
+	listen tcp://:2525
+	spooldir ./spool
+	hostname yabadoo.com
+}
+
+lists {
+	spam
+	staff
+	devs
+	all
+}
+
+users {
+	qwerty [spam, devs, gone] -> @h1.loc,@h2.loc:qwerty@h3
+	qwerty2 [devs, gone] -> @h1.loc,@h2.loc:qwerty2@h3 norelay
+	joe [staff]
+	bob [devs, gone] -> bob@google.com
+	igor [all]
+	greg [all]
+}
