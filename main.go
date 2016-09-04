@@ -30,8 +30,8 @@ func main() {
 
 func processClient(conn net.Conn) {
 
-	state = newState(conn)
-	s.send(220, "%s ready", __thisHost)
+	s := newSession(conn)
+	s.send(220, "%s ready", config.hostname)
 
 	/*
 	 * Go allows to organize the processing in a linear manner, but the
@@ -55,7 +55,7 @@ func processClient(conn net.Conn) {
 			break
 		}
 
-		if !processCommand(state, cmd) {
+		if !processCmd(s, cmd) {
 			s.send(500, "Unknown command")
 		}
 	}

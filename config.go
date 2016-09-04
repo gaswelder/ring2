@@ -57,7 +57,7 @@ func readConfig(path string) error {
 	r.DefineSection("users", func(vals [][2]string) error {
 		for _, val := range(vals) {
 			name := val[0]
-			lists, remote, err := parseUserSpec(val[1])
+			_, remote, err := parseUserSpec(val[1])
 			if err != nil {
 				return err
 			}

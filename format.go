@@ -3,9 +3,11 @@ package main
 /*
  * Parsing and formatting functions
  */
- 
+
 import (
 	"fmt"
+	"errors"
+	"time"
 )
 
 
@@ -22,7 +24,6 @@ func (s *session) send(code int, format string, args... interface{}) {
  */
 func (s *session) readCommand() (*command, error) {
 	var err error
-	var ch byte
 	var name, arg string
 
 	line, err := s.r.ReadString('\n')
@@ -31,23 +32,19 @@ func (s *session) readCommand() (*command, error) {
 
 	// Command name: a sequence of ASCII alphabetic characters.
 	for isAlpha(r.next()) {
-		name += toUpper(r.get())
+		name += string(toUpper(r.get()))
 	}
 
 	// If space follows, read the argument
 	if r.next() == ' ' {
 		for r.more() && r.next() != '\r' {
-			arg += r.get()
+			arg += string(r.get())
 		}
 	}
 
 	// Expect "\r\n"
-	if r.Get() != '\r' || r.Get() != '\n' {
+	if r.get() != '\r' || r.get() != '\n' {
 		err = errors.New("<CRLF> expected")
-	}
-
-	if r.err() != nil {
-		err = s.r.err()
 	}
 
 	if err != nil {
@@ -58,7 +55,7 @@ func (s *session) readCommand() (*command, error) {
 }
 
 func formatDate() string {
-	return time.Now().Format(RFC822)
+	return time.Now().Format(time.RFC822)
 }
 
 func formatPath(p *path) string {
@@ -92,7 +89,7 @@ func parsePath(s string) (*path, error) {
 			host := readName(r)
 			p.hosts = append(p.hosts, host)
 
-			ch = r.get()
+			ch := r.get()
 			if ch == ',' {
 				continue
 			}
@@ -104,13 +101,13 @@ func parsePath(s string) (*path, error) {
 		}
 	}
 
-	addr := readName(p) + "@"
-	p.expect('@')
-	addr += readName(p)
+	addr := readName(r) + "@"
+	r.expect('@')
+	addr += readName(r)
 	r.expect('>')
 
-	path.address = addr
-	return path, p.err()
+	p.address = addr
+	return p, r.err
 }
 
 func readName(r *scanner) string {
@@ -118,7 +115,7 @@ func readName(r *scanner) string {
 	for {
 		ch := r.next()
 		if isAlpha(ch) || isDigit(ch) || ch == '.' || ch == '-' {
-			name += ch
+			name += string(ch)
 			r.get()
 		}
 	}

@@ -41,7 +41,7 @@ type mail struct {
 
 func newDraft(from *path) *mail {
 	return &mail{
-		path,
+		from,
 		make([]*path, 0),
 	}
 }
@@ -52,6 +52,13 @@ func newDraft(from *path) *mail {
 type session struct {
 	senderHost string
 	conn net.Conn
-	r bufio.Reader
+	r *bufio.Reader
 	draft *mail
+}
+
+func newSession(conn net.Conn) *session {
+	s := new(session)
+	s.conn = conn
+	s.r = bufio.NewReader(s.conn)
+	return s
 }

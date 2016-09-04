@@ -1,5 +1,9 @@
 package main
 
+import (
+	"time"
+)
+
 var helpInit bool = false
 var helpSeed int
 
@@ -16,7 +20,7 @@ var helpMessages []string = []string{
 func helpfulMessage() string {
 	if !helpInit {
 		helpInit = true
-		helpSeed = time()
+		helpSeed = time.Now().Second()
 	}
 	return helpMessages[helpSeed % len(helpMessages)]
 }
