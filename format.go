@@ -20,13 +20,11 @@ func (s *session) send(code int, format string, args... interface{}) {
 }
 
 /*
- * Read a command from the client.
+ * Parse a command line
  */
-func (s *session) readCommand() (*command, error) {
+func parseCommand(line string) (*command, error) {
 	var err error
 	var name, arg string
-
-	line, err := s.r.ReadString('\n')
 
 	r := newScanner(line)
 

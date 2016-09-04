@@ -43,11 +43,17 @@ func processClient(conn net.Conn) {
 	 * command functions, passing them a pointer to the current state.
 	 */
 	for {
-		cmd, err := s.readCommand()
-
+		line, err := s.r.ReadString('\n')
 		if err != nil {
 			log.Println(err)
 			break
+		}
+
+		cmd, err := parseCommand(line)
+
+		if err != nil {
+			s.send(500, err.Error())
+			continue
 		}
 
 		if cmd.name == "QUIT" {
