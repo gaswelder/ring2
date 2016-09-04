@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"genera/cfg"
+	"github.com/gaswelder/cfg"
 )
 
 var config struct {
