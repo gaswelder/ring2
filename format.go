@@ -37,6 +37,7 @@ func (s *session) readCommand() (*command, error) {
 
 	// If space follows, read the argument
 	if r.next() == ' ' {
+		r.get()
 		for r.more() && r.next() != '\r' {
 			arg += string(r.get())
 		}
