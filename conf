@@ -1,7 +1,6 @@
-# Test configuration
 
 server {
-	listen tcp://:2525
+	listen :2525
 	spooldir ./spool
 	hostname yabadoo.com
 }

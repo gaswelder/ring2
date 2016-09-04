@@ -26,47 +26,50 @@ func readConfig(path string) error {
 	config.lists = make([]string, 0)
 	config.users = make([]*userRec, 0)
 
-	r := cfg.NewReader()
+	conf, err := cfg.ParseFile(path)
+	if err != nil {
+		return err
+	}
 
-	r.DefineSection("server", func(vals [][2]string) error {
-		for _, val := range(vals) {
-			switch val[0] {
+	sec, ok := conf["server"]
+	if ok {
+		for key, val := range(sec) {
+			switch key {
 				case "listen":
-					config.listen = val[1]
+					config.listen = val
 				case "spooldir":
-					config.spooldir = val[1]
+					config.spooldir = val
 				case "hostname":
-					config.hostname = val[1]
+					config.hostname = val
 				default:
-					return fmt.Errorf("Unknown param %s", val[0])
+					return fmt.Errorf("Unknown param %s", key)
 			}
 		}
-		return nil
-	})
+	}
 
-	r.DefineSection("lists", func(vals [][2]string) error {
-		for _, val := range(vals) {
-			if val[1] != "" {
-				return fmt.Errorf("Unexpected argument: %s %s", val[0], val[1])
+	sec, ok = conf["lists"]
+	if ok {
+		for key, val := range(sec) {
+			if val != "" {
+				return fmt.Errorf("Unexpected argument: %s %s", key, val)
 			}
-			config.lists = append(config.lists, val[0])
+			config.lists = append(config.lists, key)
 		}
-		return nil
-	})
+	}
 
-	r.DefineSection("users", func(vals [][2]string) error {
-		for _, val := range(vals) {
-			name := val[0]
-			_, remote, err := parseUserSpec(val[1])
+	sec, ok = conf["users"]
+	if ok {
+		for key, val := range(sec) {
+			name := key
+			_, remote, err := parseUserSpec(val)
 			if err != nil {
 				return err
 			}
 			user := &userRec{name, remote}
 			config.users = append(config.users, user)
 		}
-		return nil
-	})
-	return r.ParseFile(path)
+	}
+	return nil
 }
 
 func parseUserSpec(spec string) ([]string, string, error) {
