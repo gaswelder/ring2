@@ -3,11 +3,18 @@ package main
 import (
 	"net"
 	"log"
+	"os"
+	"fmt"
 )
 
 func main() {
 
 	err := readConfig("conf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = createDir(config.spooldir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,4 +74,24 @@ func processClient(conn net.Conn) {
 	}
 
 	conn.Close()
+}
+
+func createDir(path string) error {
+
+	stat, err := os.Stat(path)
+
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(path, 0755)
+		stat, err = os.Stat(config.spooldir)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if !stat.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+
+	return nil
 }

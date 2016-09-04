@@ -253,8 +253,13 @@ func processMessage(m *mail, text string) bool {
  * Store a message locally
  */
 func storeMessage(text string, rpath *path, u *userRec) error {
-	fpath := config.spooldir + "/" + u.name + "/" + time.Now().Format("20060102-150405")
+	fpath := config.spooldir + "/" + u.name
+	err := createDir(fpath)
+	if err != nil {
+		return err
+	}
 
+	fpath += "/" + time.Now().Format("20060102-150405")
 	f, err := os.Create(fpath)
 	if err != nil {
 		return err
