@@ -7,9 +7,9 @@ import (
 
 var config struct {
 	hostname string
-	relay bool
+	relay    bool
 	spooldir string
-	listen string
+	listen   string
 
 	lists []string
 	users []*userRec
@@ -33,23 +33,23 @@ func readConfig(path string) error {
 
 	sec, ok := conf["server"]
 	if ok {
-		for key, val := range(sec) {
+		for key, val := range sec {
 			switch key {
-				case "listen":
-					config.listen = val
-				case "spooldir":
-					config.spooldir = val
-				case "hostname":
-					config.hostname = val
-				default:
-					return fmt.Errorf("Unknown param %s", key)
+			case "listen":
+				config.listen = val
+			case "spooldir":
+				config.spooldir = val
+			case "hostname":
+				config.hostname = val
+			default:
+				return fmt.Errorf("Unknown param %s", key)
 			}
 		}
 	}
 
 	sec, ok = conf["lists"]
 	if ok {
-		for key, val := range(sec) {
+		for key, val := range sec {
 			if val != "" {
 				return fmt.Errorf("Unexpected argument: %s %s", key, val)
 			}
@@ -59,7 +59,7 @@ func readConfig(path string) error {
 
 	sec, ok = conf["users"]
 	if ok {
-		for key, val := range(sec) {
+		for key, val := range sec {
 			name := key
 			_, remote, err := parseUserSpec(val)
 			if err != nil {

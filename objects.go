@@ -1,15 +1,15 @@
 package main
 
 import (
-	"net"
 	"bufio"
+	"net"
 )
 
 /*
  * User record
  */
 type userRec struct {
-	name string
+	name   string
 	remote string
 }
 
@@ -18,7 +18,7 @@ type userRec struct {
  */
 type command struct {
 	name string
-	arg string
+	arg  string
 }
 
 /*
@@ -35,7 +35,7 @@ type path struct {
  * A mail draft
  */
 type mail struct {
-	sender *path
+	sender     *path
 	recipients []*path
 }
 
@@ -51,9 +51,9 @@ func newDraft(from *path) *mail {
  */
 type session struct {
 	senderHost string
-	conn net.Conn
-	r *bufio.Reader
-	draft *mail
+	conn       net.Conn
+	r          *bufio.Reader
+	draft      *mail
 }
 
 func newSession(conn net.Conn) *session {

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"net"
-	"log"
-	"os"
 	"fmt"
+	"log"
+	"net"
+	"os"
 )
 
 func main() {
@@ -19,9 +19,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ln, err := net.Listen("tcp", config.listen);
+	ln, err := net.Listen("tcp", config.listen)
 	if err != nil {
-		log.Fatal(err);
+		log.Fatal(err)
 	}
 
 	for {

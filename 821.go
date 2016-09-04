@@ -1,21 +1,23 @@
 package main
 
 import (
-	"log"
+	"errors"
 	"fmt"
-	"time"
+	"genera/tproto"
+	"log"
+	"net"
 	"os"
 	"strings"
-	"errors"
-	"net"
-	"genera/tproto"
+	"time"
 )
 
 /*
  * Command functions register
  */
-type cmdFunc func(s *session, cmd *command);
+type cmdFunc func(s *session, cmd *command)
+
 var commands = make(map[string]cmdFunc)
+
 func defineCmd(name string, f cmdFunc) {
 	commands[name] = f
 }
@@ -31,7 +33,6 @@ func processCmd(s *session, cmd *command) bool {
 	f(s, cmd)
 	return true
 }
-
 
 func init() {
 
@@ -216,7 +217,7 @@ func processMessage(m *mail, text string) bool {
 	rpath := m.sender
 	var err error
 
-	for _, fpath := range(m.recipients) {
+	for _, fpath := range m.recipients {
 		if len(fpath.hosts) > 0 {
 			err = relayMessage(text, fpath, rpath)
 		} else {
@@ -265,7 +266,6 @@ func storeMessage(text string, rpath *path, u *userRec) error {
 		return err
 	}
 	defer f.Close()
-
 
 	fmt.Fprintf(f, "Return-Path: %s\r\n", formatPath(rpath))
 	_, err = f.WriteString(text)
@@ -348,7 +348,7 @@ func sendMail(text string, fpath, rpath *path) error {
 	w.Expect(354)
 
 	lines := strings.Split(text, "\r\n")
-	for _, line := range(lines) {
+	for _, line := range lines {
 		if len(line) > 0 && line[0] == '.' {
 			w.Write(".")
 		}
@@ -379,7 +379,7 @@ func findUser(addr string) *userRec {
 		return nil
 	}
 
-	for _, u := range(config.users) {
+	for _, u := range config.users {
 		if u.name == name {
 			return u
 		}

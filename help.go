@@ -22,5 +22,5 @@ func helpfulMessage() string {
 		helpInit = true
 		helpSeed = time.Now().Second()
 	}
-	return helpMessages[helpSeed % len(helpMessages)]
+	return helpMessages[helpSeed%len(helpMessages)]
 }

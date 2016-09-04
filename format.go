@@ -5,16 +5,15 @@ package main
  */
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"time"
 )
-
 
 /*
  * Send a formatted response to the client.
  */
-func (s *session) send(code int, format string, args... interface{}) {
+func (s *session) send(code int, format string, args ...interface{}) {
 	line := fmt.Sprintf(format, args...)
 	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
 }
@@ -61,7 +60,7 @@ func formatPath(p *path) string {
 	s := "<"
 
 	if len(p.hosts) > 0 {
-		for i, host := range(p.hosts) {
+		for i, host := range p.hosts {
 			if i > 0 {
 				s += ","
 				s += "@" + host
