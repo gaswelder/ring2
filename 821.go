@@ -361,6 +361,23 @@ func sendMail(text string, fpath, rpath *path) error {
 	return w.Err()
 }
 
-func findUser(name string) *userRec {
+func findUser(addr string) *userRec {
+	pos := strings.Index(addr, "@")
+	if pos < 0 {
+		return nil
+	}
+
+	name := addr[:pos]
+	host := addr[pos+1:]
+
+	if !strings.EqualFold(host, config.hostname) {
+		return nil
+	}
+
+	for _, u := range(config.users) {
+		if u.name == name {
+			return u
+		}
+	}
 	return nil
 }
