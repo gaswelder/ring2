@@ -81,7 +81,10 @@ func parsePath(s string) (*path, error) {
 	p.hosts = make([]string, 0)
 
 	r := newScanner(s)
-	r.expect('<')
+	if !r.expect('<') {
+		return nil, r.err
+	}
+
 	if r.next() == '@' {
 		for {
 			r.expect('@')
@@ -116,7 +119,9 @@ func readName(r *scanner) string {
 		if isAlpha(ch) || isDigit(ch) || ch == '.' || ch == '-' {
 			name += string(ch)
 			r.get()
+			continue
 		}
+		break
 	}
 	return name
 }

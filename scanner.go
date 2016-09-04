@@ -57,12 +57,14 @@ func (s *scanner) rest() string {
 	return s.str[s.pos:]
 }
 
-func (s *scanner) expect(ch byte) {
+func (s *scanner) expect(ch byte) bool {
 	if s.err != nil {
-		return
+		return false
 	}
 	n := s.get()
 	if n != ch {
 		s.err = fmt.Errorf("expected %c, got %c", ch, n)
+		return false
 	}
+	return true
 }
