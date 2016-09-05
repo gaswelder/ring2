@@ -18,6 +18,7 @@ func main() {
 	}
 
 	go server(config.listen, processSMTP)
+	go server(":11000", processPOP)
 	select{}
 }
 
@@ -27,7 +28,7 @@ func server(addr string, f func(net.Conn)) error {
 		return err
 	}
 
-	log.Printf("Listening on %s\n", config.listen)
+	log.Printf("Listening on %s\n", addr)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
