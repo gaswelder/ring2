@@ -7,30 +7,7 @@ import (
 	"os"
 )
 
-func runSMTP() {
-	err := createDir(config.spooldir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ln, err := net.Listen("tcp", config.listen)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Listening on %s\n", config.listen)
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		go processClient(conn)
-	}
-}
-
-func processClient(conn net.Conn) {
+func processSMTP(conn net.Conn) {
 
 	log.Printf("%s connected\n", conn.RemoteAddr().String())
 	s := newSession(conn)
