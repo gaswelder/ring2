@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -16,6 +17,35 @@ import (
 func (s *session) send(code int, format string, args ...interface{}) {
 	line := fmt.Sprintf(format, args...)
 	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
+}
+
+type smtpWriter struct {
+	code     int
+	lastLine string
+	conn     net.Conn
+}
+
+func (s *session) begin(code int) *smtpWriter {
+	w := new(smtpWriter)
+	w.code = code
+	w.conn = s.conn
+	return w
+}
+
+func (w *smtpWriter) send(format string, args ...interface{}) {
+	line := fmt.Sprintf(format, args...)
+	if w.lastLine != "" {
+		fmt.Fprintf(w.conn, "%d-%s\r\n", w.code, w.lastLine)
+	}
+	w.lastLine = line
+}
+
+func (w *smtpWriter) end() {
+	if w.lastLine == "" {
+		return
+	}
+	fmt.Fprintf(w.conn, "%d %s\r\n", w.code, w.lastLine)
+	w.lastLine = ""
 }
 
 /*
