@@ -8,7 +8,7 @@ import (
 var config struct {
 	hostname string
 	relay    bool
-	spooldir string
+	maildir  string
 	smtp     string
 	pop      string
 	lists    []string
@@ -21,7 +21,7 @@ func readConfig(path string) error {
 	 */
 	config.hostname = "localhost"
 	config.relay = false
-	config.spooldir = "./spool"
+	config.maildir = "./mail"
 	config.lists = make([]string, 0)
 	config.users = make([]*userRec, 0)
 
@@ -38,8 +38,8 @@ func readConfig(path string) error {
 				config.smtp = val
 			case "pop":
 				config.pop = val
-			case "spooldir":
-				config.spooldir = val
+			case "maildir":
+				config.maildir = val
 			case "hostname":
 				config.hostname = val
 			default:

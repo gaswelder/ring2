@@ -29,7 +29,7 @@ type mailbox struct {
 
 func newBox(u *userRec) (*mailbox, error) {
 	b := new(mailbox)
-	b.path = config.spooldir + "/" + u.name
+	b.path = config.maildir + "/" + u.name
 	err := createDir(b.path)
 	if err != nil {
 		return nil, err

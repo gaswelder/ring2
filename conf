@@ -1,8 +1,8 @@
 server {
 	smtp :2525
 	pop :11000
-	spooldir ./spool
-	hostname yabadoo.com
+	maildir ./mail
+	hostname localhost
 }
 
 lists {

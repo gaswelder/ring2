@@ -12,7 +12,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = createDir(config.spooldir)
+	err = createDir(config.maildir)
 	if err != nil {
 		log.Fatal(err)
 	}
