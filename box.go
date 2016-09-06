@@ -29,10 +29,14 @@ type mailbox struct {
 }
 
 
-func newBox(u *userRec) *mailbox {
+func newBox(u *userRec) (*mailbox, error) {
 	b := new(mailbox)
 	b.path = config.spooldir + "/" + u.name
-	return b
+	err := createDir(b.path)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Machinery to sort FileInfo arrays

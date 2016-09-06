@@ -278,7 +278,10 @@ func checkUser(name, pass string) *userRec {
 
 // Load a user's box, lock it and parse the messages list
 func openBox(user *userRec) (box *mailbox, err error) {
-	box = newBox(user)
+	box, err = newBox(user)
+	if err != nil {
+		return
+	}
 	err = box.lock()
 	if err != nil {
 		return
