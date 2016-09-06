@@ -209,6 +209,33 @@ func init() {
 	/*
 	 * Optional commands
 	 */
+
+	/*
+	 * UIDL[ <msg>]
+	 */
+	popCmd("UIDL", func(s *popState, c *command) {
+		if !checkAuth(s) {
+			return
+		}
+		if c.arg == "" {
+			s.ok("")
+			for _, msg := range s.box.messages {
+				if !msg.deleted {
+					s.send("%d %s", msg.id, msg.filename)
+				}
+			}
+			s.send(".")
+			return
+		}
+
+		msg, err := getMessage(s, c)
+		if err != nil {
+			s.err(err.Error())
+			return
+		}
+		s.ok("%d %s", msg.id, msg.filename)
+	})
+
 	popCmd("TOP", func(s *popState, c *command) {
 		s.err("Not implemented")
 		/*
