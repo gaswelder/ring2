@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"genera/tproto"
 	"log"
 	"net"
 	"strings"
@@ -346,7 +345,7 @@ func sendMail(text string, fpath, rpath *path) error {
 		return err
 	}
 
-	w := tproto.NewWriter(conn)
+	w := newTpClient(conn)
 	w.Expect(250)
 
 	w.WriteLine("HELO %s", config.hostname)
