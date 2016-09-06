@@ -1,12 +1,12 @@
 package main
 
 import (
+	"errors"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
-	"io/ioutil"
 	"sync"
-	"errors"
 )
 
 /*
@@ -21,13 +21,11 @@ import (
  * was deleted, so in that case the "last id" will be zero.
  */
 
-
 type mailbox struct {
 	messages []*message
-	lastId int
-	path string
+	lastId   int
+	path     string
 }
-
 
 func newBox(u *userRec) (*mailbox, error) {
 	b := new(mailbox)
@@ -41,7 +39,8 @@ func newBox(u *userRec) (*mailbox, error) {
 
 // Machinery to sort FileInfo arrays
 type kludge []os.FileInfo
-func (a kludge) Len() int { return len(a) }
+
+func (a kludge) Len() int      { return len(a) }
 func (a kludge) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a kludge) Less(i, j int) bool {
 	return strings.Compare(a[i].Name(), a[j].Name()) == -1
@@ -149,8 +148,6 @@ func (b *mailbox) writeFile(name string, data string) error {
 	return ioutil.WriteFile(path, []byte(data), 0600)
 }
 
-
-
 var register struct {
 	sync.Mutex
 	boxes map[string]bool
@@ -159,7 +156,6 @@ var register struct {
 func init() {
 	register.boxes = make(map[string]bool)
 }
-
 
 func (b *mailbox) lock() error {
 	register.Lock()

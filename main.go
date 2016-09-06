@@ -29,7 +29,7 @@ func main() {
 	if !ok {
 		log.Fatal("Both SMTP and POP disabled")
 	}
-	select{}
+	select {}
 }
 
 func server(addr string, f func(net.Conn)) error {

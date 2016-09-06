@@ -9,10 +9,10 @@ var config struct {
 	hostname string
 	relay    bool
 	spooldir string
-	smtp   string
-	pop string
-	lists []string
-	users []*userRec
+	smtp     string
+	pop      string
+	lists    []string
+	users    []*userRec
 }
 
 func readConfig(path string) error {

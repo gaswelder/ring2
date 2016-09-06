@@ -265,7 +265,7 @@ func storeMessage(text string, rpath *path, u *userRec) error {
 
 	name := time.Now().Format("20060102-150405")
 	line := fmt.Sprintf("Return-Path: %s\r\n", formatPath(rpath))
-	err = box.writeFile(name, line + text)
+	err = box.writeFile(name, line+text)
 	return err
 }
 

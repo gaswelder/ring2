@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"net"
 	"io/ioutil"
+	"net"
 )
 
 /*
@@ -65,10 +65,10 @@ func newSession(conn net.Conn) *session {
 }
 
 type message struct {
-	id int
-	size int64
-	deleted bool
-	path string
+	id       int
+	size     int64
+	deleted  bool
+	path     string
 	filename string
 }
 
@@ -86,14 +86,14 @@ func (m *message) Content() (string, error) {
  */
 type popState struct {
 	userName string
-	user *userRec
-	box *mailbox
-	lastId int
-	conn net.Conn
-	r *bufio.Reader
+	user     *userRec
+	box      *mailbox
+	lastId   int
+	conn     net.Conn
+	r        *bufio.Reader
 }
 
-func newPopSession(c net.Conn) (*popState) {
+func newPopSession(c net.Conn) *popState {
 	s := new(popState)
 	s.conn = c
 	s.r = bufio.NewReader(c)

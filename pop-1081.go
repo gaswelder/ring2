@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-	"strconv"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 )
 
 type popfunc func(s *popState, c *command)
+
 var popFuncs = make(map[string]popfunc)
+
 func popCmd(name string, f popfunc) {
 	popFuncs[name] = f
 }
@@ -211,10 +213,10 @@ func init() {
 	popCmd("TOP", func(s *popState, c *command) {
 		s.err("Not implemented")
 		/*
-		TOP msg n
-		+OK
-		send all headers
-		send n lines of the text
+			TOP msg n
+			+OK
+			send all headers
+			send n lines of the text
 		*/
 	})
 	popCmd("RPOP", func(s *popState, c *command) {
@@ -242,7 +244,7 @@ func (s *popState) err(comment string) {
 
 // Send a line
 func (s *popState) send(format string, args ...interface{}) error {
-	line := fmt.Sprintf(format + "\r\n", args...)
+	line := fmt.Sprintf(format+"\r\n", args...)
 	_, err := s.conn.Write([]byte(line))
 	return err
 }
