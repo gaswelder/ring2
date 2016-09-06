@@ -6,7 +6,6 @@ import (
 	"genera/tproto"
 	"log"
 	"net"
-	"os"
 	"strings"
 	"time"
 )
@@ -254,21 +253,19 @@ func processMessage(m *mail, text string) bool {
  * Store a message locally
  */
 func storeMessage(text string, rpath *path, u *userRec) error {
-	fpath := config.spooldir + "/" + u.name
-	err := createDir(fpath)
+	box, err := newBox(u)
 	if err != nil {
 		return err
 	}
-
-	fpath += "/" + time.Now().Format("20060102-150405")
-	f, err := os.Create(fpath)
+	err = box.lock()
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer box.unlock()
 
-	fmt.Fprintf(f, "Return-Path: %s\r\n", formatPath(rpath))
-	_, err = f.WriteString(text)
+	name := time.Now().Format("20060102-150405")
+	line := fmt.Sprintf("Return-Path: %s\r\n", formatPath(rpath))
+	err = box.writeFile(name, line + text)
 	return err
 }
 
