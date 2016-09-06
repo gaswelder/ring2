@@ -81,7 +81,7 @@ func init() {
 	})
 
 	/*
-	 * MAIL FROM:<path>
+	 * MAIL FROM:<path>[ <params>]
 	 */
 	defineCmd("MAIL", func(s *session, cmd *command) {
 
@@ -92,14 +92,21 @@ func init() {
 
 		p := newScanner(cmd.arg)
 		if !p.SkipStri("FROM:") {
-			s.send(501, "The format is: MAIL FROM:<reverse-path>")
+			s.send(501, "The format is: MAIL FROM:<reverse-path>[ <params>]")
 			return
 		}
 
-		rpath, err := parsePath(p.rest())
+		// Read the <path> part
+		rpath, err := parsePath(p)
 		if err != nil {
 			s.send(501, "Malformed reverse-path")
 			return
+		}
+
+		// If <params> part follows, read it,
+		// but don't do anything with it
+		if p.more() && p.next() == ' ' {
+			log.Println("MAIL params: " + p.rest())
 		}
 
 		s.draft = newDraft(rpath)
@@ -122,7 +129,7 @@ func init() {
 			return
 		}
 
-		path, err := parsePath(p.rest())
+		path, err := parsePath(p)
 		if err != nil {
 			s.send(501, "Malformed forward-path")
 			return

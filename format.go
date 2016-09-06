@@ -66,12 +66,11 @@ func formatPath(p *path) string {
 
 // "<@ONE,@TWO:JOE@THREE>"
 // "<joe@three>"
-func parsePath(s string) (*path, error) {
+func parsePath(r *scanner) (*path, error) {
 
 	p := new(path)
 	p.hosts = make([]string, 0)
 
-	r := newScanner(s)
 	if !r.expect('<') {
 		return nil, r.err
 	}
