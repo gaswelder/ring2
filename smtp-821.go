@@ -16,9 +16,13 @@ import (
 type cmdFunc func(s *session, cmd *command)
 
 var commands = make(map[string]cmdFunc)
+var smtpExts = make(map[string]cmdFunc)
 
 func defineCmd(name string, f cmdFunc) {
 	commands[name] = f
+}
+func smtpExt(name string, f cmdFunc) {
+	smtpExts[name] = f
 }
 
 /*
@@ -26,6 +30,9 @@ func defineCmd(name string, f cmdFunc) {
  */
 func processCmd(s *session, cmd *command) bool {
 	f, ok := commands[cmd.name]
+	if !ok {
+		f, ok = smtpExts[cmd.name]
+	}
 	if !ok {
 		return false
 	}
@@ -45,6 +52,25 @@ func init() {
 		}
 		s.senderHost = cmd.arg
 		s.send(250, "Go ahead, %s", cmd.arg)
+	})
+
+	/*
+	 * EHLO <host>
+	 */
+	defineCmd("EHLO", func(s *session, cmd *command) {
+		if cmd.arg == "" {
+			s.send(501, "Argument expected")
+			return
+		}
+		s.senderHost = cmd.arg
+
+		// Send greeting and a list of supported extensions
+		w := s.begin(250)
+		w.send("Hello, %s", cmd.arg)
+		for name, _ := range smtpExts {
+			w.send("%s", name)
+		}
+		w.end()
 	})
 
 	/*
@@ -166,14 +192,9 @@ func init() {
 		}
 	})
 
-	defineCmd("SEND", obsolete)
-	defineCmd("SOML", obsolete)
-	defineCmd("SAML", obsolete)
-	defineCmd("TURN", obsolete)
 	defineCmd("VRFY", obsolete)
-	defineCmd("EXPN", obsolete)
 
-	defineCmd("HELP", func(s *session, cmd *command) {
+	smtpExt("HELP", func(s *session, cmd *command) {
 		s.send(214, helpfulMessage())
 	})
 }
