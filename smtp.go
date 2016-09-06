@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -50,6 +51,60 @@ func processSMTP(conn net.Conn) {
 
 	conn.Close()
 	log.Printf("%s disconnected\n", conn.RemoteAddr().String())
+}
+
+/*
+ * A user session, or context.
+ */
+type session struct {
+	senderHost string
+	conn       net.Conn
+	r          *bufio.Reader
+	draft      *mail
+}
+
+func newSession(conn net.Conn) *session {
+	s := new(session)
+	s.conn = conn
+	s.r = bufio.NewReader(s.conn)
+	return s
+}
+
+/*
+ * Send a formatted response to the client.
+ */
+func (s *session) send(code int, format string, args ...interface{}) {
+	line := fmt.Sprintf(format, args...)
+	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
+}
+
+type smtpWriter struct {
+	code     int
+	lastLine string
+	conn     net.Conn
+}
+
+func (s *session) begin(code int) *smtpWriter {
+	w := new(smtpWriter)
+	w.code = code
+	w.conn = s.conn
+	return w
+}
+
+func (w *smtpWriter) send(format string, args ...interface{}) {
+	line := fmt.Sprintf(format, args...)
+	if w.lastLine != "" {
+		fmt.Fprintf(w.conn, "%d-%s\r\n", w.code, w.lastLine)
+	}
+	w.lastLine = line
+}
+
+func (w *smtpWriter) end() {
+	if w.lastLine == "" {
+		return
+	}
+	fmt.Fprintf(w.conn, "%d %s\r\n", w.code, w.lastLine)
+	w.lastLine = ""
 }
 
 func createDir(path string) error {

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 type popfunc func(s *popState, c *command)
@@ -222,48 +221,6 @@ func init() {
 	popCmd("RPOP", func(s *popState, c *command) {
 		s.err("How such a command got into the RFC at all?")
 	})
-}
-
-// Send a success response with optional comment
-func (s *popState) ok(comment string, args ...interface{}) {
-	if comment != "" {
-		s.send("+OK " + fmt.Sprintf(comment, args...))
-	} else {
-		s.send("+OK")
-	}
-}
-
-// Send an error response with optinal comment
-func (s *popState) err(comment string) {
-	if comment != "" {
-		s.send("-ERR " + comment)
-	} else {
-		s.send("-ERR")
-	}
-}
-
-// Send a line
-func (s *popState) send(format string, args ...interface{}) error {
-	line := fmt.Sprintf(format+"\r\n", args...)
-	_, err := s.conn.Write([]byte(line))
-	return err
-}
-
-// Send a multiline data
-func (s *popState) sendData(data string) error {
-	var err error
-	lines := strings.Split(data, "\r\n")
-	for _, line := range lines {
-		if len(line) > 0 && line[0] == '.' {
-			line = "." + line
-		}
-		err = s.send("%s", line)
-		if err != nil {
-			return err
-		}
-	}
-	err = s.send(".")
-	return err
 }
 
 // Returns user record with given name and password.

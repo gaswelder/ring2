@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"io/ioutil"
-	"net"
 )
 
 /*
@@ -47,23 +45,6 @@ func newDraft(from *path) *mail {
 	}
 }
 
-/*
- * A user session, or context.
- */
-type session struct {
-	senderHost string
-	conn       net.Conn
-	r          *bufio.Reader
-	draft      *mail
-}
-
-func newSession(conn net.Conn) *session {
-	s := new(session)
-	s.conn = conn
-	s.r = bufio.NewReader(s.conn)
-	return s
-}
-
 type message struct {
 	id       int
 	size     int64
@@ -79,23 +60,4 @@ func (m *message) Content() (string, error) {
 		return "", err
 	}
 	return string(v), nil
-}
-
-/*
- * User POP session
- */
-type popState struct {
-	userName string
-	user     *userRec
-	box      *mailbox
-	lastId   int
-	conn     net.Conn
-	r        *bufio.Reader
-}
-
-func newPopSession(c net.Conn) *popState {
-	s := new(popState)
-	s.conn = c
-	s.r = bufio.NewReader(c)
-	return s
 }
