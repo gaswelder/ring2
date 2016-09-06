@@ -39,7 +39,7 @@ func processSMTP(conn net.Conn) {
 		}
 
 		if cmd.name == "QUIT" {
-			s.send(250, "So long, Bob")
+			s.send(221, "So long, Bob")
 			break
 		}
 
