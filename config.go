@@ -9,8 +9,8 @@ var config struct {
 	hostname string
 	relay    bool
 	spooldir string
-	listen   string
-
+	smtp   string
+	pop string
 	lists []string
 	users []*userRec
 }
@@ -19,7 +19,6 @@ func readConfig(path string) error {
 	/*
 	 * Init to default values
 	 */
-	config.listen = "localhost:2525"
 	config.hostname = "localhost"
 	config.relay = false
 	config.spooldir = "./spool"
@@ -35,8 +34,10 @@ func readConfig(path string) error {
 	if ok {
 		for key, val := range sec {
 			switch key {
-			case "listen":
-				config.listen = val
+			case "smtp":
+				config.smtp = val
+			case "pop":
+				config.pop = val
 			case "spooldir":
 				config.spooldir = val
 			case "hostname":

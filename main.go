@@ -17,8 +17,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go server(config.listen, processSMTP)
-	go server(":11000", processPOP)
+	ok := false
+	if config.smtp != "" {
+		go server(config.smtp, processSMTP)
+		ok = true
+	}
+	if config.pop != "" {
+		go server(config.pop, processPOP)
+		ok = true
+	}
+	if !ok {
+		log.Fatal("Both SMTP and POP disabled")
+	}
 	select{}
 }
 
