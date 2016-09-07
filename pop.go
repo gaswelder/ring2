@@ -26,22 +26,24 @@ func processPOP(conn net.Conn) {
 		}
 
 		if cmd.name == "QUIT" {
-			s.ok("")
+			err = nil
+			if s.box != nil {
+				s.box.setLast(s.lastId)
+				err = s.box.purge()
+				s.box.unlock()
+			}
+			if err != nil {
+				log.Println(err)
+				s.err(err.Error())
+			} else {
+				s.ok("")
+			}
 			break
 		}
 
 		if !execPopCmd(s, cmd) {
 			s.err("Unknown command")
 		}
-	}
-
-	if s.box != nil {
-		s.box.setLast(s.lastId)
-		err := s.box.purge()
-		if err != nil {
-			log.Println(err)
-		}
-		s.box.unlock()
 	}
 	conn.Close()
 }
