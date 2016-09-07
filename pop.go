@@ -97,14 +97,21 @@ func (s *popState) sendData(data string) error {
 	var err error
 	lines := strings.Split(data, "\r\n")
 	for _, line := range lines {
-		if len(line) > 0 && line[0] == '.' {
-			line = "." + line
-		}
-		err = s.send("%s", line)
+		err = s.sendDataLine(line)
 		if err != nil {
 			return err
 		}
 	}
 	err = s.send(".")
+	return err
+}
+
+// Sends a line of data, taking care of the "dot-stuffing"
+func (s *popState) sendDataLine(line string) error {
+	if len(line) > 0 && line[0] == '.' {
+		line = "." + line
+	}
+	line += "\r\n"
+	_, err := s.conn.Write([]byte(line))
 	return err
 }

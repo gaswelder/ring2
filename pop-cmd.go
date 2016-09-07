@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type popfunc func(s *popState, c *command)
@@ -236,15 +237,59 @@ func init() {
 		s.ok("%d %s", msg.id, msg.filename)
 	})
 
+	/*
+	 * TOP <msg> <n>
+	 */
 	popCmd("TOP", func(s *popState, c *command) {
-		s.err("Not implemented")
+
+		var id, n int
+		_, err := fmt.Sscanf(c.arg, "%d %d", &id, &n)
+		if err != nil {
+			s.err(err.Error())
+			return
+		}
+
+		msg := findMessage(s, id)
+		if msg == nil {
+			s.err("No such message")
+			return
+		}
+
+		text, err := msg.Content()
+		if err != nil {
+			s.err(err.Error())
+			return
+		}
+
+		lines := strings.Split(text, "\r\n")
+		size := len(lines)
+		i := 0
+
 		/*
-			TOP msg n
-			+OK
-			send all headers
-			send n lines of the text
-		*/
+		 * Send all headers
+		 */
+		s.ok("")
+		for i < size {
+			s.send("%s", lines[i])
+			if lines[i] == "" {
+				break
+			}
+			i++
+		}
+
+		/*
+		 * Send no more than 'n' lines of the body
+		 */
+		i++
+		for i < size && n > 0 {
+			s.send("---%d", n)
+			s.send("%s", lines[i])
+			i++
+			n--
+		}
+		s.send(".")
 	})
+
 	popCmd("RPOP", func(s *popState, c *command) {
 		s.err("How such a command got into the RFC at all?")
 	})
@@ -293,10 +338,19 @@ func getMessage(s *popState, c *command) (*message, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, msg := range s.box.messages {
-		if msg.id == id {
-			return msg, nil
-		}
+
+	msg := findMessage(s, id)
+	if msg != nil {
+		return msg, nil
 	}
 	return nil, errors.New("No such message")
+}
+
+func findMessage(s *popState, id int) *message {
+	for _, msg := range s.box.messages {
+		if msg.id == id {
+			return msg
+		}
+	}
+	return nil
 }
