@@ -30,8 +30,6 @@ func processSMTP(conn net.Conn) {
 			break
 		}
 
-		fmt.Print(line)
-
 		cmd, err := parseCommand(line)
 
 		if err != nil {

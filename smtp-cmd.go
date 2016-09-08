@@ -235,9 +235,13 @@ func checkPath(p *path) (int, string) {
 	if err != nil {
 		return 501, err.Error()
 	}
-
 	if !strings.EqualFold(host, config.hostname) {
 		return 550, "Not a local address"
+	}
+
+	_, ok := config.lists[name]
+	if ok {
+		return 250, "OK"
 	}
 
 	user, ok := config.users[name]
@@ -271,7 +275,7 @@ func processMessage(m *mail, text string) bool {
 			err = relayMessage(text, fpath, rpath)
 		} else {
 			name, _, err := splitAddress(fpath.address)
-			if err != nil {
+			if err == nil {
 				err = dispatchMail(text, name, rpath)
 			}
 		}
@@ -301,32 +305,36 @@ func processMessage(m *mail, text string) bool {
 }
 
 func dispatchMail(text string, name string, rpath *path) error {
+	log.Printf("Dispatch: %s\n", name)
 	/*
 	 * If it a user?
 	 */
-	fmt.Println("dispatch to %s\n", name)
 	user, ok := config.users[name]
 	if ok {
 		return storeMessage(text, rpath, user)
 	}
 
 	/*
-		list := findList(addr)
-		if list != nil {
-			ok := false
-			for _, user := range list {
-				err := dispatchMail(text, name, rpath)
-				if err == nil {
-					ok = true
-				}
+	 * A list?
+	 */
+	list, ok := config.lists[name]
+	if list != nil {
+		ok := false
+		for _, user := range list {
+			err := dispatchMail(text, user.name, rpath)
+			if err == nil {
+				ok = true
 			}
-			if !ok {
-				err = fmt.Errorf("Dispatch to list '%s' failed", name)
-			}
-			return err
 		}
-	*/
+		if !ok {
+			return fmt.Errorf("Dispatch to list '%s' failed", name)
+		}
+		return nil
+	}
 
+	/*
+	 * What then?
+	 */
 	return fmt.Errorf("Unhandled recipient: %s", name)
 }
 

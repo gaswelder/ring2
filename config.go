@@ -12,7 +12,7 @@ var config struct {
 	maildir  string
 	smtp     string
 	pop      string
-	lists    []string
+	lists    map[string][]*userRec
 	users    map[string]*userRec
 }
 
@@ -23,7 +23,7 @@ func readConfig(path string) error {
 	config.hostname = "localhost"
 	config.relay = false
 	config.maildir = "./mail"
-	config.lists = make([]string, 0)
+	config.lists = make(map[string][]*userRec)
 	config.users = make(map[string]*userRec)
 
 	conf, err := cfg.ParseFile(path)
@@ -55,7 +55,7 @@ func readConfig(path string) error {
 			if val != "" {
 				return fmt.Errorf("Unexpected argument: %s %s", key, val)
 			}
-			config.lists = append(config.lists, key)
+			config.lists[key] = make([]*userRec, 0)
 		}
 	}
 
@@ -68,6 +68,13 @@ func readConfig(path string) error {
 			}
 			user.name = key
 			config.users[key] = user
+			for _, listname := range user.lists {
+				_, ok := config.lists[listname]
+				if !ok {
+					return fmt.Errorf("Unknown list: %s", listname)
+				}
+				config.lists[listname] = append(config.lists[listname], user)
+			}
 		}
 	}
 	return nil
@@ -102,21 +109,9 @@ func parseUserSpec(spec string) (*userRec, error) {
 		return nil, err
 	}
 	for _, name := range lists {
-		if unknownList(name) {
-			return nil, fmt.Errorf("Unknown list: %s", name)
-		}
 		user.lists = append(user.lists, name)
 	}
 	return user, nil
-}
-
-func unknownList(name string) bool {
-	for _, v := range config.lists {
-		if v == name {
-			return false
-		}
-	}
-	return true
 }
 
 func parseLists(b *scanner) ([]string, error) {
