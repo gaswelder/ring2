@@ -244,20 +244,12 @@ func checkPath(p *path) (int, string) {
 		return 250, "OK"
 	}
 
-	user, ok := config.users[name]
-	if !ok {
-		return 550, "Unknown Recipient"
+	_, ok = config.users[name]
+	if ok {
+		return 250, "OK"
 	}
 
-	if user.remote != "" {
-		if !config.relay {
-			return 551, "User not local; please try " + user.remote
-		} else {
-			return 251, "User not local; will forward to " + user.remote
-		}
-	}
-
-	return 250, "OK"
+	return 550, "Unknown Recipient"
 }
 
 func processMessage(m *mail, text string) bool {

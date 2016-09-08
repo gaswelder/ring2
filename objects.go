@@ -9,7 +9,6 @@ import (
  */
 type userRec struct {
 	name     string
-	remote   string
 	pwhash   string
 	password string
 	lists    []string

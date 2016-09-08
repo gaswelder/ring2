@@ -89,10 +89,6 @@ func parseUserSpec(spec string) (*userRec, error) {
 		for b.more() && !isSpace(b.next()) {
 			user.pwhash += string(b.get())
 		}
-	} else if b.next() == '>' {
-		for b.more() && !isSpace(b.next()) {
-			user.remote += string(b.get())
-		}
 	} else if b.next() == '"' {
 		b.get()
 		for b.more() && b.next() != '"' {
