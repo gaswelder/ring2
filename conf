@@ -17,8 +17,8 @@ users {
 	# Following the user name is the password in double quotes or its
 	# bcrypt hash without quotes.
 
-	bob $2y$10$m7S6/6L7keP0zMDAwXxW7ebJbYmQwZ/Z9YCqPfao3UnVHjZJ2ZJ/m [devs, all]
-	joe "123" [staff, all]
-	igor "igor" [all]
-	greg "greg" [all]
+	bob $2y$10$m7S6/6L7keP0zMDAwXxW7ebJbYmQwZ/Z9YCqPfao3UnVHjZJ2ZJ/m [devs]
+	joe "123" [staff]
+	igor "igor" [devs]
+	greg "greg"
 }
