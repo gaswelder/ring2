@@ -13,10 +13,12 @@ lists {
 }
 
 users {
-	qwerty [spam, devs, gone] -> @h1.loc,@h2.loc:qwerty@h3
-	qwerty2 [devs, gone] -> @h1.loc,@h2.loc:qwerty2@h3 norelay
-	joe [staff]
-	bob [devs, gone] -> bob@google.com
-	igor [all]
-	greg [all]
+	# Each line specifies a user. First word is the user name.
+	# Following the user name is the password in double quotes or its
+	# bcrypt hash without quotes.
+
+	bob $2y$10$m7S6/6L7keP0zMDAwXxW7ebJbYmQwZ/Z9YCqPfao3UnVHjZJ2ZJ/m [devs, all]
+	joe "123" [staff, all]
+	igor "igor" [all]
+	greg "greg" [all]
 }

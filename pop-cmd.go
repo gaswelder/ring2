@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"strings"
 )
@@ -298,10 +299,26 @@ func init() {
 // Returns user record with given name and password.
 // Returns nil if there is no such user.
 func checkUser(name, pass string) *userRec {
-	fmt.Printf("Implement checkUser!\n")
 	for _, user := range config.users {
-		if user.name == name {
-			return user
+		if user.name != name {
+			continue
+		}
+
+		if user.password != "" {
+			if user.password == pass {
+				return user
+			} else {
+				return nil
+			}
+		}
+
+		if user.pwhash != "" {
+			err := bcrypt.CompareHashAndPassword([]byte(user.pwhash), []byte(pass))
+			if err == nil {
+				return user
+			} else {
+				return nil
+			}
 		}
 	}
 	return nil

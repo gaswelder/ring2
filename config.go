@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gaswelder/cfg"
 )
@@ -61,20 +62,98 @@ func readConfig(path string) error {
 	sec, ok = conf["users"]
 	if ok {
 		for key, val := range sec {
-			name := key
-			_, remote, err := parseUserSpec(val)
+			user, err := parseUserSpec(val)
 			if err != nil {
 				return err
 			}
-			user := &userRec{name, remote}
+			user.name = key
+			fmt.Println(user)
 			config.users = append(config.users, user)
 		}
 	}
 	return nil
 }
 
-func parseUserSpec(spec string) ([]string, string, error) {
+func parseUserSpec(spec string) (*userRec, error) {
+
+	user := new(userRec)
+	b := newScanner(spec)
+
+	if b.next() == '$' {
+		for b.more() && !isSpace(b.next()) {
+			user.pwhash += string(b.get())
+		}
+	} else if b.next() == '>' {
+		for b.more() && !isSpace(b.next()) {
+			user.remote += string(b.get())
+		}
+	} else if b.next() == '"' {
+		b.get()
+		for b.more() && b.next() != '"' {
+			user.password += string(b.get())
+		}
+		if b.get() != '"' {
+			return nil, errors.New("Unmatched password quote")
+		}
+	}
+
+	user.lists = make([]string, 0)
+	lists, err := parseLists(b)
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range lists {
+		if unknownList(name) {
+			return nil, fmt.Errorf("Unknown list: %s", name)
+		}
+		user.lists = append(user.lists, name)
+	}
+	return user, nil
+}
+
+func unknownList(name string) bool {
+	for _, v := range config.lists {
+		if v == name {
+			return false
+		}
+	}
+	return true
+}
+
+func parseLists(b *scanner) ([]string, error) {
 	lists := make([]string, 0)
-	remote := ""
-	return lists, remote, nil
+	skipSpace(b)
+	if b.next() != '[' {
+		return lists, nil
+	}
+	b.get()
+
+	skipSpace(b)
+	for b.more() && b.next() != ']' {
+		name := readName(b)
+		if name == "" {
+			return lists, errors.New("Empty list name before " + b.rest())
+		}
+		lists = append(lists, name)
+		skipSpace(b)
+		if b.next() == ',' {
+			b.get()
+			skipSpace(b)
+		}
+	}
+
+	if b.next() != ']' {
+		return lists, errors.New("']' expected")
+	}
+	return lists, nil
+}
+
+func skipSpace(b *scanner) {
+	for b.more() && isSpace(b.next()) {
+		b.get()
+	}
+}
+
+func isSpace(c byte) bool {
+	return c == ' ' || c == '\t'
 }
