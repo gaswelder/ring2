@@ -212,6 +212,16 @@ func obsolete(s *session, cmd *command) {
 	s.send(502, "Obsolete command")
 }
 
+func splitAddress(addr string) (name string, host string, err error) {
+	pos := strings.Index(addr, "@")
+	if pos < 0 {
+		err = errors.New("Invalid email address")
+	}
+	name = addr[:pos]
+	host = addr[pos+1:]
+	return
+}
+
 func checkPath(p *path) (int, string) {
 	if len(p.hosts) > 0 {
 		if !config.relay {
@@ -221,8 +231,17 @@ func checkPath(p *path) (int, string) {
 		}
 	}
 
-	user := findUser(p.address)
-	if user == nil {
+	name, host, err := splitAddress(p.address)
+	if err != nil {
+		return 501, err.Error()
+	}
+
+	if !strings.EqualFold(host, config.hostname) {
+		return 550, "Not a local address"
+	}
+
+	user, ok := config.users[name]
+	if !ok {
 		return 550, "Unknown Recipient"
 	}
 
@@ -244,13 +263,18 @@ func processMessage(m *mail, text string) bool {
 	var err error
 
 	for _, fpath := range m.recipients {
+		/*
+		 * If the path is a route, relay the message.
+		 * Otherwise, handle locally.
+		 */
 		if len(fpath.hosts) > 0 {
 			err = relayMessage(text, fpath, rpath)
 		} else {
-			user := findUser(fpath.address)
-			err = storeMessage(text, rpath, user)
+			name, _, err := splitAddress(fpath.address)
+			if err != nil {
+				err = dispatchMail(text, name, rpath)
+			}
 		}
-
 		/*
 		 * If processing failed, send failure notification
 		 * using the reverse-path.
@@ -274,6 +298,36 @@ func processMessage(m *mail, text string) bool {
 		ok++
 	}
 	return ok > 0
+}
+
+func dispatchMail(text string, name string, rpath *path) error {
+	/*
+	 * If it a user?
+	 */
+	fmt.Println("dispatch to %s\n", name)
+	user, ok := config.users[name]
+	if ok {
+		return storeMessage(text, rpath, user)
+	}
+
+	/*
+		list := findList(addr)
+		if list != nil {
+			ok := false
+			for _, user := range list {
+				err := dispatchMail(text, name, rpath)
+				if err == nil {
+					ok = true
+				}
+			}
+			if !ok {
+				err = fmt.Errorf("Dispatch to list '%s' failed", name)
+			}
+			return err
+		}
+	*/
+
+	return fmt.Errorf("Unhandled recipient: %s", name)
 }
 
 /*
@@ -388,25 +442,4 @@ func sendMail(text string, fpath, rpath *path) error {
 	conn.Close()
 
 	return w.Err()
-}
-
-func findUser(addr string) *userRec {
-	pos := strings.Index(addr, "@")
-	if pos < 0 {
-		return nil
-	}
-
-	name := addr[:pos]
-	host := addr[pos+1:]
-
-	if !strings.EqualFold(host, config.hostname) {
-		return nil
-	}
-
-	for _, u := range config.users {
-		if u.name == name {
-			return u
-		}
-	}
-	return nil
 }

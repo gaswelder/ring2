@@ -13,7 +13,7 @@ var config struct {
 	smtp     string
 	pop      string
 	lists    []string
-	users    []*userRec
+	users    map[string]*userRec
 }
 
 func readConfig(path string) error {
@@ -24,7 +24,7 @@ func readConfig(path string) error {
 	config.relay = false
 	config.maildir = "./mail"
 	config.lists = make([]string, 0)
-	config.users = make([]*userRec, 0)
+	config.users = make(map[string]*userRec)
 
 	conf, err := cfg.ParseFile(path)
 	if err != nil {
@@ -67,8 +67,7 @@ func readConfig(path string) error {
 				return err
 			}
 			user.name = key
-			fmt.Println(user)
-			config.users = append(config.users, user)
+			config.users[key] = user
 		}
 	}
 	return nil
