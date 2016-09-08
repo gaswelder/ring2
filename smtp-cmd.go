@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -351,14 +352,13 @@ func storeMessage(text string, rpath *path, u *userRec) error {
 }
 
 func sendBounce(fpath, rpath *path) error {
-	b := new(bufFmt)
-	b.put("Date: %s\r\n", formatDate())
-	b.put("Date: %s", formatDate())
-	b.put("From: %s", config.hostname)
-	b.put("To: %s", rpath.address)
-	b.put("Subject: Mail delivery failure")
-	b.put("")
-	b.put("Sorry, your mail could not be delivered to %s", fpath.address)
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "Date: %s\r\n", formatDate())
+	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.hostname)
+	fmt.Fprintf(&b, "To: %s\r\n", rpath.address)
+	fmt.Fprintf(&b, "Subject: mail delivery failure\r\n")
+	fmt.Fprintf(&b, "\r\n")
+	fmt.Fprintf(&b, "Sorry, your mail could not be delivered to %s", fpath.address)
 	/*
 	 * Specify null as reverse-path to prevent loops
 	 */
