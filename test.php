@@ -13,7 +13,7 @@ $c->expect(250);
 $c->writeLine("MAIL FROM:<zilch@foo>");
 $c->expect(250);
 
-$c->writeLine("RCPT TO:<joe@yabadoo.com>");
+$c->writeLine("RCPT TO:<devs@localhost>");
 $c->expect(250);
 
 $c->writeLine("DATA");
@@ -28,7 +28,7 @@ $c->writeLine(".");
 $c->expect(250);
 
 $c->writeLine("QUIT");
-$c->expect(250);
+$c->expect(221);
 
 
 fclose($f);
