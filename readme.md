@@ -36,7 +36,8 @@ The `server` section has the following keys:
 * `hostname` - host's domain name;
 * `smtp` - SMTP listen address;
 * `pop` - POP listen address;
-* `maildir` - directory where mail will be stored.
+* `maildir` - directory where mail will be stored;
+* `debug` - if present, server and client commands will be echoed on the standard error output.
 
 The `hostname` should probably be the same as the output of "hostname"
 or "uname -n" command. This value affects the addresses of users.

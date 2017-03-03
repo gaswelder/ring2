@@ -18,6 +18,7 @@ func processPOP(conn net.Conn) {
 			log.Println(err)
 			break
 		}
+		debMsg(line)
 
 		cmd, err := parseCommand(line)
 		if err != nil {

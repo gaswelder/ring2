@@ -7,6 +7,7 @@ import (
 )
 
 var config struct {
+	debug    bool
 	hostname string
 	relay    bool
 	maildir  string
@@ -20,6 +21,7 @@ func readConfig(path string) error {
 	/*
 	 * Init to default values
 	 */
+	config.debug = false
 	config.hostname = "localhost"
 	config.relay = false
 	config.maildir = "./mail"
@@ -43,6 +45,8 @@ func readConfig(path string) error {
 				config.maildir = val
 			case "hostname":
 				config.hostname = val
+			case "debug":
+				config.debug = true
 			default:
 				return fmt.Errorf("Unknown param %s", key)
 			}

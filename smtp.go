@@ -29,6 +29,7 @@ func processSMTP(conn net.Conn) {
 			log.Println(err)
 			break
 		}
+		debMsg("< " + line)
 
 		cmd, err := parseCommand(line)
 
@@ -73,6 +74,7 @@ func newSession(conn net.Conn) *session {
  */
 func (s *session) send(code int, format string, args ...interface{}) {
 	line := fmt.Sprintf(format, args...)
+	debMsg("> %d %s", code, line)
 	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
 }
 
@@ -92,6 +94,7 @@ func (s *session) begin(code int) *smtpWriter {
 func (w *smtpWriter) send(format string, args ...interface{}) {
 	line := fmt.Sprintf(format, args...)
 	if w.lastLine != "" {
+		debMsg("> %d-%s", w.code, w.lastLine)
 		fmt.Fprintf(w.conn, "%d-%s\r\n", w.code, w.lastLine)
 	}
 	w.lastLine = line
@@ -101,6 +104,7 @@ func (w *smtpWriter) end() {
 	if w.lastLine == "" {
 		return
 	}
+	debMsg("> %d %s", w.code, w.lastLine)
 	fmt.Fprintf(w.conn, "%d %s\r\n", w.code, w.lastLine)
 	w.lastLine = ""
 }
