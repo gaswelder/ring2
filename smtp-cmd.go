@@ -427,6 +427,10 @@ func sendMail(text string, fpath, rpath *path) error {
 
 	lines := strings.Split(text, "\r\n")
 	for _, line := range lines {
+		/*
+		 * If the first character of a line is a dot,
+		 * insert one additional dot.
+		 */
 		if len(line) > 0 && line[0] == '.' {
 			w.Write(".")
 		}
