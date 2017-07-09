@@ -38,7 +38,7 @@ func (w *tpclient) Expect(code int) bool {
 		return false
 	}
 	if rcode != code {
-		w.err = fmt.Errorf("%d response expected, got %d %s", rcode, rmsg)
+		w.err = fmt.Errorf("%d response expected, got %d %s", code, rcode, rmsg)
 		return false
 	}
 

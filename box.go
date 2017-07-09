@@ -23,7 +23,7 @@ import (
 
 type mailbox struct {
 	messages []*message
-	lastId   int
+	lastID   int
 	path     string
 }
 
@@ -46,7 +46,7 @@ func (a kludge) Less(i, j int) bool {
 	return strings.Compare(a[i].Name(), a[j].Name()) == -1
 }
 
-// Scan the directory and define b.messages and b.lastId fields.
+// Scan the directory and define b.messages and b.lastID fields.
 func (b *mailbox) parseMessages() error {
 	/*
 	 * Make sure the directory exists
@@ -103,7 +103,7 @@ func (b *mailbox) parseMessages() error {
 		b.messages = append(b.messages, m)
 
 		if lastName == info.Name() {
-			b.lastId = id
+			b.lastID = id
 		}
 	}
 
@@ -177,7 +177,7 @@ func (b *mailbox) unlock() error {
 
 // Update the 'last' to point to the message with the given id
 func (b *mailbox) setLast(id int) {
-	if id == b.lastId {
+	if id == b.lastID {
 		return
 	}
 	for _, msg := range b.messages {

@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-var helpInit bool = false
+var helpInit = false
 var helpSeed int
 
-var helpMessages []string = []string{
+var helpMessages = []string{
 	"Nah, go RTFM",
 	"Sorry, I'm busy right now",
 	"Error: not a psychiatrist",

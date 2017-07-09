@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type popfunc func(s *popState, c *command)
@@ -70,7 +71,7 @@ func init() {
 			return
 		}
 		s.box = box
-		s.lastId = box.lastId
+		s.lastID = box.lastID
 		s.ok("")
 	})
 
@@ -144,8 +145,8 @@ func init() {
 		/*
 		 * Update the highest id
 		 */
-		if msg.id > s.lastId {
-			s.lastId = msg.id
+		if msg.id > s.lastID {
+			s.lastID = msg.id
 		}
 	})
 
@@ -185,7 +186,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.ok("%d", s.lastId)
+		s.ok("%d", s.lastID)
 	})
 
 	/*
@@ -204,7 +205,7 @@ func init() {
 		/*
 		 * Reset last id
 		 */
-		s.lastId = s.box.lastId
+		s.lastID = s.box.lastID
 		s.ok("")
 	})
 
@@ -307,18 +308,16 @@ func checkUser(name, pass string) *userRec {
 		if user.password != "" {
 			if user.password == pass {
 				return user
-			} else {
-				return nil
 			}
+			return nil
 		}
 
 		if user.pwhash != "" {
 			err := bcrypt.CompareHashAndPassword([]byte(user.pwhash), []byte(pass))
 			if err == nil {
 				return user
-			} else {
-				return nil
 			}
+			return nil
 		}
 	}
 	return nil

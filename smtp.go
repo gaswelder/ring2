@@ -115,7 +115,9 @@ func createDir(path string) error {
 
 	if err != nil && os.IsNotExist(err) {
 		err = os.MkdirAll(path, 0755)
-		stat, err = os.Stat(config.maildir)
+		if err != nil {
+			stat, err = os.Stat(config.maildir)
+		}
 	}
 
 	if err != nil {

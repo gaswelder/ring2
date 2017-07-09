@@ -67,7 +67,7 @@ func init() {
 		// Send greeting and a list of supported extensions
 		w := s.begin(250)
 		w.send("Hello, %s", cmd.arg)
-		for name, _ := range smtpExts {
+		for name := range smtpExts {
 			w.send("%s", name)
 		}
 		w.end()
@@ -227,9 +227,8 @@ func checkPath(p *path) (int, string) {
 	if len(p.hosts) > 0 {
 		if !config.relay {
 			return 551, "This server does not relay"
-		} else {
-			return 250, "OK"
 		}
+		return 250, "OK"
 	}
 
 	name, host, err := splitAddress(p.address)
@@ -267,7 +266,8 @@ func processMessage(m *mail, text string) bool {
 		if len(fpath.hosts) > 0 {
 			err = relayMessage(text, fpath, rpath)
 		} else {
-			name, _, err := splitAddress(fpath.address)
+			var name string
+			name, _, err = splitAddress(fpath.address)
 			if err == nil {
 				err = dispatchMail(text, name, rpath)
 			}
@@ -288,7 +288,7 @@ func processMessage(m *mail, text string) bool {
 		}
 
 		if err != nil {
-			log.Println("Could not send failure notification: %e", err)
+			log.Printf("Could not send failure notification: %e\n", err)
 			continue
 		}
 
@@ -310,7 +310,7 @@ func dispatchMail(text string, name string, rpath *path) error {
 	/*
 	 * A list?
 	 */
-	list, ok := config.lists[name]
+	list, _ := config.lists[name]
 	if list != nil {
 		ok := false
 		for _, user := range list {

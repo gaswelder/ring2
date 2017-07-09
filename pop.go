@@ -29,7 +29,7 @@ func processPOP(conn net.Conn) {
 		if cmd.name == "QUIT" {
 			err = nil
 			if s.box != nil {
-				s.box.setLast(s.lastId)
+				s.box.setLast(s.lastID)
 				err = s.box.purge()
 				s.box.unlock()
 			}
@@ -56,7 +56,7 @@ type popState struct {
 	userName string
 	user     *userRec
 	box      *mailbox
-	lastId   int
+	lastID   int
 	conn     net.Conn
 	r        *bufio.Reader
 }
