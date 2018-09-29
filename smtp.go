@@ -8,6 +8,12 @@ import (
 	"os"
 )
 
+const smtpAuthOK = 235
+const smtpParameterSyntaxError = 501
+const smtpBadSequenceOfCommands = 503
+const smtpParameterNotImplemented = 504
+const smtpAuthInvalid = 535
+
 func processSMTP(conn net.Conn) {
 	s := newSession(conn)
 	s.send(220, "%s ready", config.hostname)
@@ -58,6 +64,7 @@ type session struct {
 	conn       net.Conn
 	r          *bufio.Reader
 	draft      *mail
+	user       *userRec
 }
 
 func newSession(conn net.Conn) *session {

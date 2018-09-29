@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -204,6 +205,61 @@ func init() {
 	smtpExt("HELP", func(s *session, cmd *command) {
 		s.send(214, helpfulMessage())
 	})
+
+	// AUTH <type> <arg>
+	smtpExt("AUTH", func(s *session, cmd *command) {
+		// Naively split the auth arguments by a single space.
+		parts := strings.Split(cmd.arg, " ")
+
+		// Here we are prepared to deal only with the "PLAIN <...>"" case.
+		if len(parts) != 2 || parts[0] != "PLAIN" {
+			s.send(smtpParameterNotImplemented, "Only PLAIN <...> is supported")
+			return
+		}
+
+		// If already authorized, reject
+		if s.user != nil {
+			s.send(smtpBadSequenceOfCommands, "Already authorized")
+			return
+		}
+
+		user, smtpErr := plainAuth(parts[1])
+		if smtpErr != nil {
+			s.send(smtpErr.code, smtpErr.message)
+			return
+		}
+
+		if user == nil {
+			s.send(smtpAuthInvalid, "Authentication credentials invalid")
+			return
+		}
+
+		s.user = user
+		s.send(smtpAuthOK, "Authentication succeeded")
+	})
+}
+
+type smtpError struct {
+	code    int
+	message string
+}
+
+func plainAuth(arg string) (*userRec, *smtpError) {
+	// AGdhcwAxMjM= -> \0user\0pass
+	data, err := base64.StdEncoding.DecodeString(arg)
+	if err != nil {
+		return nil, &smtpError{smtpParameterSyntaxError, err.Error()}
+	}
+
+	parts := strings.Split(string(data), "\x00")
+	if len(parts) != 3 {
+		return nil, &smtpError{smtpParameterSyntaxError, "Could not parse the auth string"}
+	}
+
+	login := parts[1]
+	pass := parts[2]
+
+	return findUser(login, pass), nil
 }
 
 /*
