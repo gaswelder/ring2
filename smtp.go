@@ -115,23 +115,9 @@ func (w *smtpWriter) end() {
 }
 
 func createDir(path string) error {
-
 	stat, err := os.Stat(path)
-
-	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(path, 0755)
-		if err != nil {
-			stat, err = os.Stat(config.maildir)
-		}
+	if stat != nil && err == nil {
+		return nil
 	}
-
-	if err != nil {
-		return err
-	}
-
-	if !stat.IsDir() {
-		return fmt.Errorf("%s is not a directory", path)
-	}
-
-	return nil
+	return os.MkdirAll(path, 0755)
 }
