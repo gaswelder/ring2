@@ -9,8 +9,6 @@ import (
 )
 
 func processSMTP(conn net.Conn) {
-
-	log.Printf("%s connected\n", conn.RemoteAddr().String())
 	s := newSession(conn)
 	s.send(220, "%s ready", config.hostname)
 

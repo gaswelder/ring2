@@ -45,6 +45,7 @@ func server(addr string, f func(net.Conn)) error {
 			log.Println(err)
 			continue
 		}
+		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go f(conn)
 	}
 }
