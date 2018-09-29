@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -390,7 +391,7 @@ func storeMessage(text string, rpath *path, u *userRec) error {
 	}
 	defer box.unlock()
 
-	name := time.Now().Format("20060102-150405")
+	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
 	line := fmt.Sprintf("Return-Path: %s\r\n", formatPath(rpath))
 	err = box.writeFile(name, line+text)
 	return err
