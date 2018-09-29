@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type popfunc func(s *popState, c *command)
@@ -51,7 +49,7 @@ func init() {
 			s.err("Wrong commands order")
 			return
 		}
-		user := checkUser(s.userName, c.arg)
+		user := findUser(s.userName, c.arg)
 		if user == nil {
 			s.err("Auth failed")
 			s.userName = ""
@@ -295,32 +293,6 @@ func init() {
 	popCmd("RPOP", func(s *popState, c *command) {
 		s.err("How such a command got into the RFC at all?")
 	})
-}
-
-// Returns user record with given name and password.
-// Returns nil if there is no such user.
-func checkUser(name, pass string) *userRec {
-	for _, user := range config.users {
-		if user.name != name {
-			continue
-		}
-
-		if user.password != "" {
-			if user.password == pass {
-				return user
-			}
-			return nil
-		}
-
-		if user.pwhash != "" {
-			err := bcrypt.CompareHashAndPassword([]byte(user.pwhash), []byte(pass))
-			if err == nil {
-				return user
-			}
-			return nil
-		}
-	}
-	return nil
 }
 
 // Load a user's box, lock it and parse the messages list
