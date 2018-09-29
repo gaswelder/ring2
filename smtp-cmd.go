@@ -225,10 +225,7 @@ func splitAddress(addr string) (name string, host string, err error) {
 
 func checkPath(p *path) (int, string) {
 	if len(p.hosts) > 0 {
-		if !config.relay {
-			return 551, "This server does not relay"
-		}
-		return 250, "OK"
+		return 551, "This server does not relay"
 	}
 
 	name, host, err := splitAddress(p.address)
@@ -259,18 +256,10 @@ func processMessage(m *mail, text string) bool {
 	var err error
 
 	for _, fpath := range m.recipients {
-		/*
-		 * If the path is a route, relay the message.
-		 * Otherwise, handle locally.
-		 */
-		if len(fpath.hosts) > 0 {
-			err = relayMessage(text, fpath, rpath)
-		} else {
-			var name string
-			name, _, err = splitAddress(fpath.address)
-			if err == nil {
-				err = dispatchMail(text, name, rpath)
-			}
+		var name string
+		name, _, err = splitAddress(fpath.address)
+		if err == nil {
+			err = dispatchMail(text, name, rpath)
 		}
 		/*
 		 * If processing failed, send failure notification
@@ -363,33 +352,6 @@ func sendBounce(fpath, rpath *path) error {
 	 * Specify null as reverse-path to prevent loops
 	 */
 	return sendMail(b.String(), rpath, nil)
-}
-
-/*
- * Relay a message
- */
-func relayMessage(text string, fpath, rpath *path) error {
-	/*
-	 * Remove our hostname from the forward-path, if present.
-	 */
-	if len(fpath.hosts) > 0 && strings.EqualFold(fpath.hosts[0], config.hostname) {
-		fpath.hosts = fpath.hosts[1:]
-	}
-
-	if len(fpath.hosts) == 0 {
-		return errors.New("No forward path")
-	}
-
-	/*
-	 * The reverse-path may be null in case we are dealing with
-	 * a bounced mail.
-	 * Add our hostname to the reverse-path, if it's not null.
-	 */
-	if rpath != nil {
-		rpath.hosts = append([]string{config.hostname}, rpath.hosts...)
-	}
-
-	return sendMail(text, fpath, rpath)
 }
 
 /*

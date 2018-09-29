@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+
 	"github.com/gaswelder/cfg"
 )
 
 var config struct {
 	debug    bool
 	hostname string
-	relay    bool
 	maildir  string
 	smtp     string
 	pop      string
@@ -23,7 +23,6 @@ func readConfig(path string) error {
 	 */
 	config.debug = false
 	config.hostname = "localhost"
-	config.relay = false
 	config.maildir = "./mail"
 	config.lists = make(map[string][]*userRec)
 	config.users = make(map[string]*userRec)
