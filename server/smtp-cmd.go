@@ -2,14 +2,12 @@ package server
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/gaswelder/ring2/scanner"
 )
@@ -383,19 +381,12 @@ func dispatchMail(text string, name string, rpath *path, config *Config) error {
  * Store a message locally
  */
 func storeMessage(text string, rpath *path, u *UserRec, config *Config) error {
-	box, err := newBox(u, config)
+	box, err := u.mailbox(config)
 	if err != nil {
 		return err
 	}
-	err = box.lock()
-	if err != nil {
-		return err
-	}
-	defer box.unlock()
-
-	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
 	line := fmt.Sprintf("Return-Path: %s\r\n", formatPath(rpath))
-	err = box.writeFile(name, line+text)
+	err = box.Add(line + text)
 	return err
 }
 

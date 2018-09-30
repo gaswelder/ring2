@@ -1,12 +1,15 @@
-package server
+package mailbox
 
 import (
+	"crypto/md5"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 /*
@@ -21,18 +24,17 @@ import (
  * was deleted, so in that case the "last id" will be zero.
  */
 
-type mailbox struct {
+type Mailbox struct {
 	path string
 }
 
-func newBox(u *UserRec, config *Config) (*mailbox, error) {
-	b := new(mailbox)
-	b.path = config.Maildir + "/" + u.Name
-	err := createDir(b.path)
+func New(path string) (*Mailbox, error) {
+	box := &Mailbox{path}
+	err := createDir(path)
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	return box, nil
 }
 
 // Machinery to sort FileInfo arrays
@@ -44,7 +46,7 @@ func (a kludge) Less(i, j int) bool {
 	return strings.Compare(a[i].Name(), a[j].Name()) == -1
 }
 
-func (b *mailbox) list() ([]*message, error) {
+func (b *Mailbox) List() ([]*Message, error) {
 	/*
 	 * Make sure the directory exists
 	 */
@@ -70,7 +72,7 @@ func (b *mailbox) list() ([]*message, error) {
 	/*
 	 * Scan the directory and fill the messages array
 	 */
-	messages := make([]*message, 0)
+	messages := make([]*Message, 0)
 	for _, info := range files {
 		if info.Name()[0] == '.' {
 			continue
@@ -79,7 +81,7 @@ func (b *mailbox) list() ([]*message, error) {
 			continue
 		}
 
-		m := new(message)
+		m := new(Message)
 		m.size = info.Size()
 		m.filename = info.Name()
 		m.path = b.path + "/" + m.filename
@@ -88,7 +90,7 @@ func (b *mailbox) list() ([]*message, error) {
 	return messages, nil
 }
 
-func (b *mailbox) lastRetrievedMessage() (*message, error) {
+func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 	lastName, err := b.readFile("last")
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -101,15 +103,30 @@ func (b *mailbox) lastRetrievedMessage() (*message, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := new(message)
+	m := new(Message)
 	m.size = stat.Size()
 	m.filename = lastName
 	m.path = b.path + "/" + lastName
 	return m, nil
 }
 
+func (b *Mailbox) Remove(msg *Message) error {
+	return os.Remove(b.path + "/" + msg.filename)
+}
+
+func (b *Mailbox) Add(text string) error {
+	err := b.lock()
+	if err != nil {
+		return err
+	}
+	defer b.unlock()
+
+	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
+	return b.writeFile(name, text)
+}
+
 // Scan the directory and define b.messages and b.lastID fields.
-// func (b *mailbox) parseMessages() error {
+// func (b *Mailbox) parseMessages() error {
 // 	/*
 // 	 * Make sure the directory exists
 // 	 */
@@ -145,7 +162,7 @@ func (b *mailbox) lastRetrievedMessage() (*message, error) {
 // 	/*
 // 	 * Scan the directory and fill the messages array
 // 	 */
-// 	b.messages = make([]*message, 0)
+// 	b.messages = make([]*Message, 0)
 // 	id := 0
 // 	for _, info := range files {
 // 		if info.Name()[0] == '.' {
@@ -156,7 +173,7 @@ func (b *mailbox) lastRetrievedMessage() (*message, error) {
 // 			continue
 // 		}
 
-// 		m := new(message)
+// 		m := new(Message)
 // 		m.size = info.Size()
 // 		m.filename = info.Name()
 // 		m.path = b.path + "/" + m.filename
@@ -167,7 +184,7 @@ func (b *mailbox) lastRetrievedMessage() (*message, error) {
 // }
 
 // Returns contents of a file in the directory
-func (b *mailbox) readFile(name string) (string, error) {
+func (b *Mailbox) readFile(name string) (string, error) {
 	path := b.path + "/" + name
 	val, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -177,7 +194,7 @@ func (b *mailbox) readFile(name string) (string, error) {
 }
 
 // Writes data to a file in the directory
-func (b *mailbox) writeFile(name string, data string) error {
+func (b *Mailbox) writeFile(name string, data string) error {
 	path := b.path + "/" + name
 	return ioutil.WriteFile(path, []byte(data), 0600)
 }
@@ -191,7 +208,7 @@ func init() {
 	register.boxes = make(map[string]bool)
 }
 
-func (b *mailbox) lock() error {
+func (b *Mailbox) lock() error {
 	register.Lock()
 	defer register.Unlock()
 
@@ -202,7 +219,7 @@ func (b *mailbox) lock() error {
 	return nil
 }
 
-func (b *mailbox) unlock() error {
+func (b *Mailbox) unlock() error {
 	register.Lock()
 	defer register.Unlock()
 	delete(register.boxes, b.path)
@@ -210,7 +227,7 @@ func (b *mailbox) unlock() error {
 }
 
 // Update the 'last' to point to the message with the given id
-func (b *mailbox) setLast(msg *message) {
+func (b *Mailbox) SetLast(msg *Message) {
 	b.writeFile("last", msg.filename)
 }
 

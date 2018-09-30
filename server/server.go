@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net"
+	"os"
 )
 
 type Server struct {
@@ -25,6 +26,14 @@ func (s *Server) Run() {
 
 	go s.smtp()
 	go s.pop()
+}
+
+func createDir(path string) error {
+	stat, err := os.Stat(path)
+	if stat != nil && err == nil {
+		return nil
+	}
+	return os.MkdirAll(path, 0755)
 }
 
 func (s *Server) pop() error {

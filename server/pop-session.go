@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/gaswelder/ring2/server/mailbox"
 )
 
 // popMessageEntry represents a message entry used
@@ -17,7 +18,7 @@ import (
 // and the `deleted` flag.
 type popMessageEntry struct {
 	id      int
-	msg     *message
+	msg     *mailbox.Message
 	deleted bool
 }
 
@@ -26,7 +27,7 @@ type popMessageEntry struct {
  */
 type popState struct {
 	userName    string
-	box         *mailbox
+	box         *mailbox.Mailbox
 	lastID      int
 	conn        net.Conn
 	r           *bufio.Reader
@@ -104,7 +105,7 @@ func (s *popState) entries() []*popMessageEntry {
 }
 
 func (s *popState) actualLastRetrievedEntry() (*popMessageEntry, error) {
-	last, err := s.box.lastRetrievedMessage()
+	last, err := s.box.LastRetrievedMessage()
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func (s *popState) actualLastRetrievedEntry() (*popMessageEntry, error) {
 		return nil, nil
 	}
 	for _, entry := range s.messageList {
-		if entry.msg.filename == last.filename {
+		if entry.msg.Filename() == last.Filename() {
 			return entry, nil
 		}
 	}
@@ -138,7 +139,7 @@ func (s *popState) markRetrieved(entry *popMessageEntry) {
 	}
 }
 
-func (s *popState) getMessage(arg string) (*message, error) {
+func (s *popState) getMessage(arg string) (*mailbox.Message, error) {
 	if arg == "" {
 		return nil, errors.New("Missing argument")
 	}
@@ -181,13 +182,13 @@ func (s *popState) markAsDeleted(msgid string) error {
 }
 
 func (s *popState) begin(user *UserRec) error {
-	box, err := newBox(user, s.config)
+	box, err := user.mailbox(s.config)
 	if err != nil {
 		return err
 	}
 
 	id := 0
-	ls, err := box.list()
+	ls, err := box.List()
 	if err != nil {
 		return err
 	}
@@ -217,10 +218,10 @@ func (s *popState) commit() error {
 	}
 	last := s.lastRetrievedEntry()
 	if last != nil {
-		s.box.setLast(last.msg)
+		s.box.SetLast(last.msg)
 	}
 	err := s.purge()
-	s.box.unlock()
+	// s.box.unlock()
 	return err
 }
 
@@ -236,7 +237,7 @@ func (s *popState) lastRetrievedEntry() *popMessageEntry {
 func (s *popState) stat() (count int, size int64, err error) {
 	for _, msg := range s.entries() {
 		count++
-		size += msg.msg.size
+		size += msg.msg.Size()
 	}
 	return count, size, err
 }
@@ -250,7 +251,7 @@ func (s *popState) purge() error {
 			l = append(l, entry)
 			continue
 		}
-		err := os.Remove(s.box.path + "/" + entry.msg.filename)
+		err := s.box.Remove(entry.msg)
 		if err != nil {
 			return err
 		}

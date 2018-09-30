@@ -95,7 +95,7 @@ func init() {
 		if c.arg == "" {
 			s.ok("List follows")
 			for _, entry := range s.entries() {
-				s.send("%d %d", entry.id, entry.msg.size)
+				s.send("%d %d", entry.id, entry.msg.Size())
 			}
 			s.send(".")
 			return
@@ -110,7 +110,7 @@ func init() {
 			return
 		}
 
-		s.ok("%d %d", msg.id, msg.msg.size)
+		s.ok("%d %d", msg.id, msg.msg.Size())
 	})
 
 	/*
@@ -132,7 +132,7 @@ func init() {
 			s.err(err.Error())
 			return
 		}
-		s.ok("%d octets", entry.msg.size)
+		s.ok("%d octets", entry.msg.Size())
 		s.sendData(data)
 		s.markRetrieved(entry)
 	})
@@ -197,7 +197,7 @@ func init() {
 		if c.arg == "" {
 			s.ok("")
 			for _, entry := range s.entries() {
-				s.send("%d %s", entry.id, entry.msg.filename)
+				s.send("%d %s", entry.id, entry.msg.Filename())
 			}
 			s.send(".")
 			return
@@ -208,7 +208,7 @@ func init() {
 			s.err("no such message")
 			return
 		}
-		s.ok("%d %s", msg.id, msg.msg.filename)
+		s.ok("%d %s", msg.id, msg.msg.Filename())
 	})
 
 	/*

@@ -1,8 +1,6 @@
 package server
 
-import (
-	"io/ioutil"
-)
+import "github.com/gaswelder/ring2/server/mailbox"
 
 /*
  * User record
@@ -12,6 +10,11 @@ type UserRec struct {
 	Pwhash   string
 	Password string
 	Lists    []string
+}
+
+func (u *UserRec) mailbox(config *Config) (*mailbox.Mailbox, error) {
+	path := config.Maildir + "/" + u.Name
+	return mailbox.New(path)
 }
 
 /*
@@ -45,19 +48,4 @@ func newDraft(from *path) *mail {
 		from,
 		make([]*path, 0),
 	}
-}
-
-type message struct {
-	size     int64
-	path     string
-	filename string
-}
-
-// Returns contents of the message
-func (m *message) Content() (string, error) {
-	v, err := ioutil.ReadFile(m.path)
-	if err != nil {
-		return "", err
-	}
-	return string(v), nil
 }
