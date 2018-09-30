@@ -80,6 +80,6 @@ func (s *session) send(code int, format string, args ...interface{}) {
 	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
 }
 
-func (s *session) begin(code int) *smtp.Writer {
+func (s *session) begin(code int) *smtp.BatchWriter {
 	return smtp.NewWriter(code, s.conn)
 }
