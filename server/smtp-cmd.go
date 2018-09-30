@@ -101,7 +101,7 @@ func init() {
 		}
 
 		// Read the <path> part
-		rpath, err := parsePath(p)
+		rpath, err := smtp.ParsePath(p)
 		if err != nil {
 			s.Send(501, "Malformed reverse-path")
 			return
@@ -133,7 +133,7 @@ func init() {
 			return
 		}
 
-		path, err := parsePath(p)
+		path, err := smtp.ParsePath(p)
 		if err != nil {
 			s.Send(501, "Malformed forward-path")
 			return
@@ -280,12 +280,12 @@ func splitAddress(addr string) (name string, host string, err error) {
 	return
 }
 
-func checkPath(p *path, config *Config) (int, string) {
-	if len(p.hosts) > 0 {
+func checkPath(p *smtp.Path, config *Config) (int, string) {
+	if len(p.Hosts) > 0 {
 		return 551, "This server does not relay"
 	}
 
-	name, host, err := splitAddress(p.address)
+	name, host, err := splitAddress(p.Address)
 	if err != nil {
 		return 501, err.Error()
 	}
@@ -314,7 +314,7 @@ func processMessage(m *mail, text string, config *Config) bool {
 
 	for _, fpath := range m.recipients {
 		var name string
-		name, _, err = splitAddress(fpath.address)
+		name, _, err = splitAddress(fpath.Address)
 		if err == nil {
 			err = dispatchMail(text, name, rpath, config)
 		}
@@ -343,7 +343,7 @@ func processMessage(m *mail, text string, config *Config) bool {
 	return ok > 0
 }
 
-func dispatchMail(text string, name string, rpath *path, config *Config) error {
+func dispatchMail(text string, name string, rpath *smtp.Path, config *Config) error {
 	log.Printf("Dispatch: %s\n", name)
 	/*
 	 * If it a user?
@@ -380,24 +380,24 @@ func dispatchMail(text string, name string, rpath *path, config *Config) error {
 /*
  * Store a message locally
  */
-func storeMessage(text string, rpath *path, u *UserRec, config *Config) error {
+func storeMessage(text string, rpath *smtp.Path, u *UserRec, config *Config) error {
 	box, err := config.mailbox(u)
 	if err != nil {
 		return err
 	}
-	line := fmt.Sprintf("Return-Path: %s\r\n", rpath.format())
+	line := fmt.Sprintf("Return-Path: %s\r\n", rpath.Format())
 	err = box.Add(line + text)
 	return err
 }
 
-func sendBounce(fpath, rpath *path, config *Config) error {
+func sendBounce(fpath, rpath *smtp.Path, config *Config) error {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Date: %s\r\n", formatDate())
 	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.Hostname)
-	fmt.Fprintf(&b, "To: %s\r\n", rpath.address)
+	fmt.Fprintf(&b, "To: %s\r\n", rpath.Address)
 	fmt.Fprintf(&b, "Subject: mail delivery failure\r\n")
 	fmt.Fprintf(&b, "\r\n")
-	fmt.Fprintf(&b, "Sorry, your mail could not be delivered to %s", fpath.address)
+	fmt.Fprintf(&b, "Sorry, your mail could not be delivered to %s", fpath.Address)
 	/*
 	 * Specify null as reverse-path to prevent loops
 	 */
@@ -407,13 +407,13 @@ func sendBounce(fpath, rpath *path, config *Config) error {
 /*
  * Send a message using SMTP protocol
  */
-func sendMail(text string, fpath, rpath *path, config *Config) error {
+func sendMail(text string, fpath, rpath *smtp.Path, config *Config) error {
 
-	if len(fpath.hosts) == 0 {
+	if len(fpath.Hosts) == 0 {
 		return errors.New("Empty forward-path")
 	}
 
-	conn, err := net.Dial("tcp", fpath.hosts[0])
+	conn, err := net.Dial("tcp", fpath.Hosts[0])
 	if err != nil {
 		return err
 	}
@@ -425,13 +425,13 @@ func sendMail(text string, fpath, rpath *path, config *Config) error {
 	w.Expect(250)
 
 	if rpath != nil {
-		w.WriteLine("MAIL FROM:" + rpath.format())
+		w.WriteLine("MAIL FROM:" + rpath.Format())
 	} else {
 		w.WriteLine("MAIL FROM:<>")
 	}
 	w.Expect(250)
 
-	w.WriteLine("RCPT TO:" + fpath.format())
+	w.WriteLine("RCPT TO:" + fpath.Format())
 	w.Expect(250)
 
 	w.WriteLine("DATA")

@@ -1,16 +1,18 @@
 package server
 
+import "github.com/gaswelder/ring2/server/smtp"
+
 /*
  * A mail draft
  */
 type mail struct {
-	sender     *path
-	recipients []*path
+	sender     *smtp.Path
+	recipients []*smtp.Path
 }
 
-func newDraft(from *path) *mail {
+func newDraft(from *smtp.Path) *mail {
 	return &mail{
 		from,
-		make([]*path, 0),
+		make([]*smtp.Path, 0),
 	}
 }
