@@ -29,7 +29,7 @@ func init() {
 	 * USER <name>
 	 */
 	popCmd("USER", func(s *popState, cmd *pop.Command) {
-		if s.box != nil {
+		if s.inbox != nil {
 			s.Err("Wrong commands order")
 			return
 		}
@@ -45,7 +45,7 @@ func init() {
 	 * PASS <key>
 	 */
 	popCmd("PASS", func(s *popState, c *pop.Command) {
-		if s.box != nil || s.userName == "" {
+		if s.inbox != nil || s.userName == "" {
 			s.Err("Wrong commands order")
 			return
 		}
@@ -75,7 +75,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		count, size, err := s.stat()
+		count, size, err := s.inbox.stat()
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -96,7 +96,7 @@ func init() {
 		 */
 		if c.Arg == "" {
 			s.OK("List follows")
-			for _, entry := range s.entries() {
+			for _, entry := range s.inbox.entries() {
 				s.Send("%d %d", entry.id, entry.msg.Size())
 			}
 			s.Send(".")
@@ -106,7 +106,7 @@ func init() {
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		msg := s.findEntryByID(c.Arg)
+		msg := s.inbox.findEntryByID(c.Arg)
 		if msg == nil {
 			s.Err("no such message")
 			return
@@ -123,7 +123,7 @@ func init() {
 			return
 		}
 
-		entry := s.findEntryByID(c.Arg)
+		entry := s.inbox.findEntryByID(c.Arg)
 		if entry == nil {
 			s.Err("no such message")
 			return
@@ -136,7 +136,7 @@ func init() {
 		}
 		s.OK("%d octets", entry.msg.Size())
 		s.SendData(data)
-		s.markRetrieved(entry)
+		s.inbox.markRetrieved(entry)
 	})
 
 	/*
@@ -146,7 +146,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		err := s.markAsDeleted(c.Arg)
+		err := s.inbox.markAsDeleted(c.Arg)
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -171,7 +171,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.OK("%d", s.lastID)
+		s.OK("%d", s.inbox.lastID)
 	})
 
 	/*
@@ -181,7 +181,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.reset()
+		s.inbox.reset()
 		s.OK("")
 	})
 
@@ -198,14 +198,14 @@ func init() {
 		}
 		if c.Arg == "" {
 			s.OK("")
-			for _, entry := range s.entries() {
+			for _, entry := range s.inbox.entries() {
 				s.Send("%d %s", entry.id, entry.msg.Filename())
 			}
 			s.Send(".")
 			return
 		}
 
-		msg := s.findEntryByID(c.Arg)
+		msg := s.inbox.findEntryByID(c.Arg)
 		if msg == nil {
 			s.Err("no such message")
 			return
@@ -226,7 +226,7 @@ func init() {
 			return
 		}
 
-		entry := s.findEntryByID(id)
+		entry := s.inbox.findEntryByID(id)
 		if entry == nil {
 			s.Err("No such message")
 			return
@@ -273,7 +273,7 @@ func init() {
 }
 
 func checkAuth(s *popState) bool {
-	if s.box == nil {
+	if s.inbox == nil {
 		s.Err("Unauthorized")
 		return false
 	}

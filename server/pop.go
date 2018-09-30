@@ -17,7 +17,7 @@ func processPOP(conn net.Conn, server *Server) {
 		}
 
 		if cmd.Name == "QUIT" {
-			err = s.commit()
+			err = s.inbox.commit()
 			if err != nil {
 				log.Println(err)
 				s.Err(err.Error())
