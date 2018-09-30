@@ -11,7 +11,7 @@ import (
 
 func processSMTP(conn net.Conn, server *Server) {
 	s := newSession(conn, server)
-	s.send(220, "%s ready", server.config.Hostname)
+	s.Send(220, "%s ready", server.config.Hostname)
 
 	/*
 	 * Go allows to organize the processing in a linear manner, but the
@@ -33,17 +33,17 @@ func processSMTP(conn net.Conn, server *Server) {
 		cmd, err := parseCommand(line)
 
 		if err != nil {
-			s.send(500, err.Error())
+			s.Send(500, err.Error())
 			continue
 		}
 
 		if cmd.name == "QUIT" {
-			s.send(221, "So long, Bob")
+			s.Send(221, "So long, Bob")
 			break
 		}
 
 		if !processCmd(s, cmd) {
-			s.send(500, "Unknown command")
+			s.Send(500, "Unknown command")
 		}
 	}
 
@@ -51,35 +51,40 @@ func processSMTP(conn net.Conn, server *Server) {
 	log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 }
 
+type Writer struct {
+	conn net.Conn
+}
+
+func NewWriter(conn net.Conn) *Writer {
+	return &Writer{conn}
+}
+
+func (w *Writer) Send(code int, format string, args ...interface{}) {
+	line := fmt.Sprintf(format, args...)
+	debMsg("> %d %s", code, line)
+	fmt.Fprintf(w.conn, "%d %s\r\n", code, line)
+}
+
+func (w *Writer) BeginBatch(code int) *smtp.BatchWriter {
+	return smtp.NewWriter(code, w.conn)
+}
+
 /*
  * A user session, or context.
  */
 type session struct {
 	senderHost string
-	conn       net.Conn
-	r          *bufio.Reader
-	draft      *mail
-	user       *UserRec
-	server     *Server
+	Writer
+	r      *bufio.Reader
+	draft  *mail
+	user   *UserRec
+	server *Server
 }
 
 func newSession(conn net.Conn, server *Server) *session {
 	s := new(session)
-	s.conn = conn
+	s.Writer = *NewWriter(conn)
 	s.r = bufio.NewReader(s.conn)
 	s.server = server
 	return s
-}
-
-/*
- * Send a formatted response to the client.
- */
-func (s *session) send(code int, format string, args ...interface{}) {
-	line := fmt.Sprintf(format, args...)
-	debMsg("> %d %s", code, line)
-	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
-}
-
-func (s *session) begin(code int) *smtp.BatchWriter {
-	return smtp.NewWriter(code, s.conn)
 }

@@ -50,11 +50,11 @@ func init() {
 	 */
 	defineCmd("HELO", func(s *session, cmd *command) {
 		if cmd.arg == "" {
-			s.send(501, "Argument expected")
+			s.Send(501, "Argument expected")
 			return
 		}
 		s.senderHost = cmd.arg
-		s.send(250, "Go ahead, %s", cmd.arg)
+		s.Send(250, "Go ahead, %s", cmd.arg)
 	})
 
 	/*
@@ -62,13 +62,13 @@ func init() {
 	 */
 	defineCmd("EHLO", func(s *session, cmd *command) {
 		if cmd.arg == "" {
-			s.send(501, "Argument expected")
+			s.Send(501, "Argument expected")
 			return
 		}
 		s.senderHost = cmd.arg
 
 		// Send greeting and a list of supported extensions
-		w := s.begin(250)
+		w := s.BeginBatch(250)
 		w.Send("Hello, %s", cmd.arg)
 		for name := range smtpExts {
 			w.Send("%s", name)
@@ -81,7 +81,7 @@ func init() {
 	 */
 	defineCmd("RSET", func(s *session, cmd *command) {
 		s.draft = nil
-		s.send(250, "OK")
+		s.Send(250, "OK")
 	})
 
 	/*
@@ -90,20 +90,20 @@ func init() {
 	defineCmd("MAIL", func(s *session, cmd *command) {
 
 		if s.senderHost == "" {
-			s.send(503, "HELO expected")
+			s.Send(503, "HELO expected")
 			return
 		}
 
 		p := scanner.New(cmd.arg)
 		if !p.SkipStri("FROM:") {
-			s.send(501, "The format is: MAIL FROM:<reverse-path>[ <params>]")
+			s.Send(501, "The format is: MAIL FROM:<reverse-path>[ <params>]")
 			return
 		}
 
 		// Read the <path> part
 		rpath, err := parsePath(p)
 		if err != nil {
-			s.send(501, "Malformed reverse-path")
+			s.Send(501, "Malformed reverse-path")
 			return
 		}
 
@@ -114,7 +114,7 @@ func init() {
 		}
 
 		s.draft = newDraft(rpath)
-		s.send(250, "OK")
+		s.Send(250, "OK")
 	})
 
 	/*
@@ -123,23 +123,23 @@ func init() {
 	defineCmd("RCPT", func(s *session, cmd *command) {
 
 		if s.draft == nil {
-			s.send(503, "Not in mail mode")
+			s.Send(503, "Not in mail mode")
 			return
 		}
 
 		p := scanner.New(cmd.arg)
 		if !p.SkipStri("TO:") {
-			s.send(501, "The format is: RCPT TO:<forward-path>")
+			s.Send(501, "The format is: RCPT TO:<forward-path>")
 			return
 		}
 
 		path, err := parsePath(p)
 		if err != nil {
-			s.send(501, "Malformed forward-path")
+			s.Send(501, "Malformed forward-path")
 			return
 		}
 		code, str := checkPath(path, s.server.config)
-		s.send(code, str)
+		s.Send(code, str)
 		if code >= 300 || code < 200 {
 			return
 		}
@@ -152,16 +152,16 @@ func init() {
 	defineCmd("DATA", func(s *session, cmd *command) {
 
 		if s.draft == nil {
-			s.send(503, "Not in mail mode")
+			s.Send(503, "Not in mail mode")
 			return
 		}
 
 		if len(s.draft.recipients) == 0 {
-			s.send(503, "No recipients specified")
+			s.Send(503, "No recipients specified")
 			return
 		}
 
-		s.send(354, "Start mail input, terminate with a dot line (.)")
+		s.Send(354, "Start mail input, terminate with a dot line (.)")
 
 		/*
 		 * Insert a stamp at the beginning of the message
@@ -196,16 +196,16 @@ func init() {
 		}
 
 		if processMessage(s.draft, text, s.server.config) {
-			s.send(250, "OK")
+			s.Send(250, "OK")
 		} else {
-			s.send(554, "Transaction failed")
+			s.Send(554, "Transaction failed")
 		}
 	})
 
 	defineCmd("VRFY", obsolete)
 
 	smtpExt("HELP", func(s *session, cmd *command) {
-		s.send(214, helpfulMessage())
+		s.Send(214, helpfulMessage())
 	})
 
 	// AUTH <type> <arg>
@@ -215,29 +215,29 @@ func init() {
 
 		// Here we are prepared to deal only with the "PLAIN <...>"" case.
 		if len(parts) != 2 || parts[0] != "PLAIN" {
-			s.send(smtp.ParameterNotImplemented, "Only PLAIN <...> is supported")
+			s.Send(smtp.ParameterNotImplemented, "Only PLAIN <...> is supported")
 			return
 		}
 
 		// If already authorized, reject
 		if s.user != nil {
-			s.send(smtp.BadSequenceOfCommands, "Already authorized")
+			s.Send(smtp.BadSequenceOfCommands, "Already authorized")
 			return
 		}
 
 		user, smtpErr := plainAuth(parts[1], s.server)
 		if smtpErr != nil {
-			s.send(smtpErr.code, smtpErr.message)
+			s.Send(smtpErr.code, smtpErr.message)
 			return
 		}
 
 		if user == nil {
-			s.send(smtp.AuthInvalid, "Authentication credentials invalid")
+			s.Send(smtp.AuthInvalid, "Authentication credentials invalid")
 			return
 		}
 
 		s.user = user
-		s.send(smtp.AuthOK, "Authentication succeeded")
+		s.Send(smtp.AuthOK, "Authentication succeeded")
 	})
 }
 
@@ -267,7 +267,7 @@ func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
  * Command function for obsolete commands
  */
 func obsolete(s *session, cmd *command) {
-	s.send(502, "Obsolete command")
+	s.Send(502, "Obsolete command")
 }
 
 func splitAddress(addr string) (name string, host string, err error) {
