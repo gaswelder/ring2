@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 )
@@ -11,21 +12,38 @@ const BadSequenceOfCommands = 503
 const ParameterNotImplemented = 504
 const AuthInvalid = 535
 
-type Writer struct {
+type ReadWriter struct {
 	conn net.Conn
+	r    *bufio.Reader
 }
 
-func NewWriter(conn net.Conn) *Writer {
-	return &Writer{conn}
+func NewWriter(conn net.Conn) *ReadWriter {
+	return &ReadWriter{
+		conn: conn,
+		r:    bufio.NewReader(conn),
+	}
 }
 
-func (w *Writer) Send(code int, format string, args ...interface{}) {
+func (w *ReadWriter) ReadCommand() (*Command, error) {
+	line, err := w.r.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	// debMsg("< " + line)
+	return parseCommand(line)
+}
+
+func (w *ReadWriter) ReadLine() (string, error) {
+	return w.r.ReadString('\n')
+}
+
+func (w *ReadWriter) Send(code int, format string, args ...interface{}) {
 	line := fmt.Sprintf(format, args...)
 	// debMsg("> %d %s", code, line)
 	fmt.Fprintf(w.conn, "%d %s\r\n", code, line)
 }
 
-func (w *Writer) BeginBatch(code int) *BatchWriter {
+func (w *ReadWriter) BeginBatch(code int) *BatchWriter {
 	return newBatchWriter(code, w.conn)
 }
 

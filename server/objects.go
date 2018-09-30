@@ -18,14 +18,6 @@ func (u *UserRec) mailbox(config *Config) (*mailbox.Mailbox, error) {
 }
 
 /*
- * Client's command
- */
-type command struct {
-	name string
-	arg  string
-}
-
-/*
  * Forward or reverse path
  */
 type path struct {

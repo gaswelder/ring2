@@ -1,9 +1,48 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/gaswelder/ring2/scanner"
 )
+
+type command struct {
+	name string
+	arg  string
+}
+
+func parseCommand(line string) (*command, error) {
+	var err error
+	var name, arg string
+
+	r := scanner.New(line)
+
+	// Command name: a sequence of ASCII alphabetic characters.
+	for isAlpha(r.Next()) {
+		name += string(toUpper(r.Get()))
+	}
+
+	// If space follows, read the argument
+	if r.Next() == ' ' {
+		r.Get()
+		for r.More() && r.Next() != '\r' {
+			arg += string(r.Get())
+		}
+	}
+
+	// Expect "\r\n"
+	if r.Get() != '\r' || r.Get() != '\n' {
+		err = errors.New("<CRLF> expected")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &command{name, arg}, nil
+}
 
 type popfunc func(s *popState, c *command)
 

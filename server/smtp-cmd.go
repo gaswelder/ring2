@@ -16,7 +16,7 @@ import (
 /*
  * Command functions register
  */
-type cmdFunc func(s *session, cmd *command)
+type cmdFunc func(s *session, cmd *smtp.Command)
 
 var commands = make(map[string]cmdFunc)
 var smtpExts = make(map[string]cmdFunc)
@@ -31,10 +31,10 @@ func smtpExt(name string, f cmdFunc) {
 /*
  * Call the corresponding function to process a command
  */
-func processCmd(s *session, cmd *command) bool {
-	f, ok := commands[cmd.name]
+func processCmd(s *session, cmd *smtp.Command) bool {
+	f, ok := commands[cmd.Name]
 	if !ok {
-		f, ok = smtpExts[cmd.name]
+		f, ok = smtpExts[cmd.Name]
 	}
 	if !ok {
 		return false
@@ -48,28 +48,28 @@ func init() {
 	/*
 	 * HELO <host>
 	 */
-	defineCmd("HELO", func(s *session, cmd *command) {
-		if cmd.arg == "" {
+	defineCmd("HELO", func(s *session, cmd *smtp.Command) {
+		if cmd.Arg == "" {
 			s.Send(501, "Argument expected")
 			return
 		}
-		s.senderHost = cmd.arg
-		s.Send(250, "Go ahead, %s", cmd.arg)
+		s.senderHost = cmd.Arg
+		s.Send(250, "Go ahead, %s", cmd.Arg)
 	})
 
 	/*
 	 * EHLO <host>
 	 */
-	defineCmd("EHLO", func(s *session, cmd *command) {
-		if cmd.arg == "" {
+	defineCmd("EHLO", func(s *session, cmd *smtp.Command) {
+		if cmd.Arg == "" {
 			s.Send(501, "Argument expected")
 			return
 		}
-		s.senderHost = cmd.arg
+		s.senderHost = cmd.Arg
 
 		// Send greeting and a list of supported extensions
 		w := s.BeginBatch(250)
-		w.Send("Hello, %s", cmd.arg)
+		w.Send("Hello, %s", cmd.Arg)
 		for name := range smtpExts {
 			w.Send("%s", name)
 		}
@@ -79,7 +79,7 @@ func init() {
 	/*
 	 * RSET - reset everything
 	 */
-	defineCmd("RSET", func(s *session, cmd *command) {
+	defineCmd("RSET", func(s *session, cmd *smtp.Command) {
 		s.draft = nil
 		s.Send(250, "OK")
 	})
@@ -87,14 +87,14 @@ func init() {
 	/*
 	 * MAIL FROM:<path>[ <params>]
 	 */
-	defineCmd("MAIL", func(s *session, cmd *command) {
+	defineCmd("MAIL", func(s *session, cmd *smtp.Command) {
 
 		if s.senderHost == "" {
 			s.Send(503, "HELO expected")
 			return
 		}
 
-		p := scanner.New(cmd.arg)
+		p := scanner.New(cmd.Arg)
 		if !p.SkipStri("FROM:") {
 			s.Send(501, "The format is: MAIL FROM:<reverse-path>[ <params>]")
 			return
@@ -120,14 +120,14 @@ func init() {
 	/*
 	 * RCPT TO:<path>
 	 */
-	defineCmd("RCPT", func(s *session, cmd *command) {
+	defineCmd("RCPT", func(s *session, cmd *smtp.Command) {
 
 		if s.draft == nil {
 			s.Send(503, "Not in mail mode")
 			return
 		}
 
-		p := scanner.New(cmd.arg)
+		p := scanner.New(cmd.Arg)
 		if !p.SkipStri("TO:") {
 			s.Send(501, "The format is: RCPT TO:<forward-path>")
 			return
@@ -149,7 +149,7 @@ func init() {
 	/*
 	 * Data
 	 */
-	defineCmd("DATA", func(s *session, cmd *command) {
+	defineCmd("DATA", func(s *session, cmd *smtp.Command) {
 
 		if s.draft == nil {
 			s.Send(503, "Not in mail mode")
@@ -174,7 +174,7 @@ func init() {
 		 * Read the message
 		 */
 		for {
-			line, err := s.r.ReadString('\n')
+			line, err := s.ReadLine()
 			if err != nil {
 				log.Println(err)
 				return
@@ -204,14 +204,14 @@ func init() {
 
 	defineCmd("VRFY", obsolete)
 
-	smtpExt("HELP", func(s *session, cmd *command) {
+	smtpExt("HELP", func(s *session, cmd *smtp.Command) {
 		s.Send(214, helpfulMessage())
 	})
 
 	// AUTH <type> <arg>
-	smtpExt("AUTH", func(s *session, cmd *command) {
+	smtpExt("AUTH", func(s *session, cmd *smtp.Command) {
 		// Naively split the auth arguments by a single space.
-		parts := strings.Split(cmd.arg, " ")
+		parts := strings.Split(cmd.Arg, " ")
 
 		// Here we are prepared to deal only with the "PLAIN <...>"" case.
 		if len(parts) != 2 || parts[0] != "PLAIN" {
@@ -266,7 +266,7 @@ func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
 /*
  * Command function for obsolete commands
  */
-func obsolete(s *session, cmd *command) {
+func obsolete(s *session, cmd *smtp.Command) {
 	s.Send(502, "Obsolete command")
 }
 

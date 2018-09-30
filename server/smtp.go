@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"log"
 	"net"
 
@@ -22,21 +21,13 @@ func processSMTP(conn net.Conn, server *Server) {
 	 * command functions, passing them a pointer to the current state.
 	 */
 	for {
-		line, err := s.r.ReadString('\n')
-		if err != nil {
-			log.Println(err)
-			break
-		}
-		debMsg("< " + line)
-
-		cmd, err := parseCommand(line)
-
+		cmd, err := s.ReadCommand()
 		if err != nil {
 			s.Send(500, err.Error())
 			continue
 		}
 
-		if cmd.name == "QUIT" {
+		if cmd.Name == "QUIT" {
 			s.Send(221, "So long, Bob")
 			break
 		}
@@ -54,18 +45,16 @@ func processSMTP(conn net.Conn, server *Server) {
  * A user session, or context.
  */
 type session struct {
+	*smtp.ReadWriter
 	senderHost string
-	*smtp.Writer
-	r      *bufio.Reader
-	draft  *mail
-	user   *UserRec
-	server *Server
+	draft      *mail
+	user       *UserRec
+	server     *Server
 }
 
 func newSession(conn net.Conn, server *Server) *session {
 	s := new(session)
-	s.Writer = smtp.NewWriter(conn)
-	s.r = bufio.NewReader(conn)
+	s.ReadWriter = smtp.NewWriter(conn)
 	s.server = server
 	return s
 }
