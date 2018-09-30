@@ -7,19 +7,19 @@ import (
 	"strings"
 )
 
-type ReadWriter struct {
+type readWriter struct {
 	writer io.Writer
 	reader *bufio.Reader
 }
 
-func NewReadWriter(c io.ReadWriter) *ReadWriter {
-	return &ReadWriter{
+func makeReadWriter(c io.ReadWriter) *readWriter {
+	return &readWriter{
 		writer: c,
 		reader: bufio.NewReader(c),
 	}
 }
 
-func (rw *ReadWriter) ReadCommand() (*Command, error) {
+func (rw *readWriter) readCommand() (*command, error) {
 	line, err := rw.reader.ReadString('\n')
 	// debMsg(line)
 	if err != nil {
@@ -29,7 +29,7 @@ func (rw *ReadWriter) ReadCommand() (*Command, error) {
 }
 
 // Send a success response with optional comment
-func (rw *ReadWriter) OK(comment string, args ...interface{}) {
+func (rw *readWriter) OK(comment string, args ...interface{}) {
 	if comment != "" {
 		rw.Send("+OK " + fmt.Sprintf(comment, args...))
 	} else {
@@ -38,7 +38,7 @@ func (rw *ReadWriter) OK(comment string, args ...interface{}) {
 }
 
 // Send an error response with optinal comment
-func (rw *ReadWriter) Err(comment string) {
+func (rw *readWriter) Err(comment string) {
 	if comment != "" {
 		rw.Send("-ERR " + comment)
 	} else {
@@ -47,7 +47,7 @@ func (rw *ReadWriter) Err(comment string) {
 }
 
 // Send a line
-func (rw *ReadWriter) Send(format string, args ...interface{}) error {
+func (rw *readWriter) Send(format string, args ...interface{}) error {
 	line := fmt.Sprintf(format+"\r\n", args...)
 	// debMsg("pop send: %s", line)
 	_, err := rw.writer.Write([]byte(line))
@@ -55,7 +55,7 @@ func (rw *ReadWriter) Send(format string, args ...interface{}) error {
 }
 
 // Send a multiline data
-func (rw *ReadWriter) SendData(data string) error {
+func (rw *readWriter) SendData(data string) error {
 	var err error
 	lines := strings.Split(data, "\r\n")
 	for _, line := range lines {
@@ -69,7 +69,7 @@ func (rw *ReadWriter) SendData(data string) error {
 }
 
 // Sends a line of data, taking care of the "dot-stuffing"
-func (rw *ReadWriter) SendDataLine(line string) error {
+func (rw *readWriter) SendDataLine(line string) error {
 	if len(line) > 0 && line[0] == '.' {
 		line = "." + line
 	}

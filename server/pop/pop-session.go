@@ -6,14 +6,14 @@ import (
 
 type session struct {
 	userName string
-	inbox    *InboxView
-	*ReadWriter
+	inbox    *inboxView
+	*readWriter
 	auth AuthFunc
 }
 
 func makeSession(c io.ReadWriter, auth AuthFunc) *session {
 	return &session{
-		ReadWriter: NewReadWriter(c),
+		readWriter: makeReadWriter(c),
 		auth:       auth,
 	}
 }

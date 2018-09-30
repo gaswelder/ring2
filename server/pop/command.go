@@ -9,15 +9,15 @@ import (
 /*
  * Client's command
  */
-type Command struct {
-	Name string
-	Arg  string
+type command struct {
+	name string
+	arg  string
 }
 
 /*
  * Parse a command line
  */
-func parseCommand(line string) (*Command, error) {
+func parseCommand(line string) (*command, error) {
 	var err error
 	var name, arg string
 
@@ -45,7 +45,7 @@ func parseCommand(line string) (*Command, error) {
 		return nil, err
 	}
 
-	return &Command{name, arg}, nil
+	return &command{name, arg}, nil
 }
 
 func isAlpha(c byte) bool {

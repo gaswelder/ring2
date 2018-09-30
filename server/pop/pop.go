@@ -7,25 +7,13 @@ import (
 	"github.com/gaswelder/ring2/server/mailbox"
 )
 
-// type Session interface {
-// 	ReadCommand() (*Command, error)
-// 	Err(string)
-// 	OK(fmt string, args ...interface{})
-// 	Send(fmt string, args ...interface{}) error
-// 	SendData(string) error
-// 	SetUserName(string) error
-// 	Open(password string) error
-// 	Inbox() *InboxView
-// 	Close() error
-// }
-
 type AuthFunc func(name, password string) (*mailbox.Mailbox, error)
 
 func Process(conn io.ReadWriter, auth AuthFunc) {
 	s := makeSession(conn, auth)
 	s.OK("Hello")
 	for {
-		cmd, err := s.ReadCommand()
+		cmd, err := s.readCommand()
 		if err == io.EOF {
 			break
 		}
@@ -34,13 +22,13 @@ func Process(conn io.ReadWriter, auth AuthFunc) {
 			continue
 		}
 
-		if cmd.Name == "QUIT" {
+		if cmd.name == "QUIT" {
 			if s.inbox == nil {
 				s.OK("")
 				break
 			}
 
-			err = s.inbox.Commit()
+			err = s.inbox.commit()
 			if err != nil {
 				log.Println(err)
 				s.Err(err.Error())
@@ -50,7 +38,7 @@ func Process(conn io.ReadWriter, auth AuthFunc) {
 			break
 		}
 
-		cmdfunc, ok := popFuncs[cmd.Name]
+		cmdfunc, ok := popFuncs[cmd.name]
 		if !ok {
 			s.Err("Unknown command")
 			continue
