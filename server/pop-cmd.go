@@ -49,18 +49,7 @@ func init() {
 			s.Err("Wrong commands order")
 			return
 		}
-		user := s.server.config.findUser(s.userName, c.Arg)
-		if user == nil {
-			s.Err("Auth failed")
-			s.userName = ""
-			return
-		}
-
-		/*
-		 * Lock and parse the user's box. If failed, reset back
-		 * to authentication phase.
-		 */
-		err := s.begin(user)
+		err := s.open(s.userName, c.Arg)
 		if err != nil {
 			s.Err(err.Error())
 			return

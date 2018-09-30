@@ -24,9 +24,14 @@ func newPopSession(c net.Conn, server *Server) *popState {
 	return s
 }
 
-func (s *popState) begin(user *UserRec) error {
+func (s *popState) open(username, password string) error {
 	if s.inbox != nil {
 		return errors.New("Session already started")
+	}
+
+	user := s.server.config.findUser(username, password)
+	if user == nil {
+		return errors.New("auth failed")
 	}
 	box, err := s.server.config.mailbox(user)
 	if err != nil {
