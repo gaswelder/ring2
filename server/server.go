@@ -4,8 +4,6 @@ import (
 	"log"
 	"net"
 	"os"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Server struct {
@@ -78,30 +76,4 @@ func (s *Server) smtp() error {
 			conn.Close()
 		}()
 	}
-}
-
-// Returns user record with given name and password.
-// Returns nil if there is no such user.
-func (s *Server) findUser(name, pass string) *UserRec {
-	for _, user := range s.config.Users {
-		if user.Name != name {
-			continue
-		}
-
-		if user.Password != "" {
-			if user.Password == pass {
-				return user
-			}
-			return nil
-		}
-
-		if user.Pwhash != "" {
-			err := bcrypt.CompareHashAndPassword([]byte(user.Pwhash), []byte(pass))
-			if err == nil {
-				return user
-			}
-			return nil
-		}
-	}
-	return nil
 }

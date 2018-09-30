@@ -260,7 +260,7 @@ func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
 
 	login := parts[1]
 	pass := parts[2]
-	return server.findUser(login, pass), nil
+	return server.config.findUser(login, pass), nil
 }
 
 /*
