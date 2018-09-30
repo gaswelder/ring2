@@ -118,21 +118,20 @@ func init() {
 	 * RCPT TO:<path>
 	 */
 	defineCmd("RCPT", func(s *session, cmd *smtp.Command) {
-
 		if s.draft == nil {
-			s.Send(503, "Not in mail mode")
+			s.Send(smtp.BadSequenceOfCommands, "Not in mail mode")
 			return
 		}
 
 		p := scanner.New(cmd.Arg)
 		if !p.SkipStri("TO:") {
-			s.Send(501, "The format is: RCPT TO:<forward-path>")
+			s.Send(smtp.ParameterSyntaxError, "The format is: RCPT TO:<forward-path>")
 			return
 		}
 
 		path, err := smtp.ParsePath(p)
 		if err != nil {
-			s.Send(501, "Malformed forward-path")
+			s.Send(smtp.ParameterSyntaxError, "Malformed forward-path")
 			return
 		}
 
