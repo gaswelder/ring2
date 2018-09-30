@@ -381,7 +381,7 @@ func dispatchMail(text string, name string, rpath *path, config *Config) error {
  * Store a message locally
  */
 func storeMessage(text string, rpath *path, u *UserRec, config *Config) error {
-	box, err := u.mailbox(config)
+	box, err := config.mailbox(u)
 	if err != nil {
 		return err
 	}

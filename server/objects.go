@@ -1,12 +1,5 @@
 package server
 
-import "github.com/gaswelder/ring2/server/mailbox"
-
-func (u *UserRec) mailbox(config *Config) (*mailbox.Mailbox, error) {
-	path := config.Maildir + "/" + u.Name
-	return mailbox.New(path)
-}
-
 /*
  * A mail draft
  */

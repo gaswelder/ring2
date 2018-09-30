@@ -28,7 +28,7 @@ func (s *popState) begin(user *UserRec) error {
 	if s.inbox != nil {
 		return errors.New("Session already started")
 	}
-	box, err := user.mailbox(s.server.config)
+	box, err := s.server.config.mailbox(user)
 	if err != nil {
 		return err
 	}

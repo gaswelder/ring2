@@ -1,6 +1,9 @@
 package server
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"github.com/gaswelder/ring2/server/mailbox"
+	"golang.org/x/crypto/bcrypt"
+)
 
 /*
  * User record
@@ -48,4 +51,9 @@ func (c *Config) findUser(name, pass string) *UserRec {
 		}
 	}
 	return nil
+}
+
+func (c *Config) mailbox(u *UserRec) (*mailbox.Mailbox, error) {
+	path := c.Maildir + "/" + u.Name
+	return mailbox.New(path)
 }
