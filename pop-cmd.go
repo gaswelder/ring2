@@ -49,7 +49,7 @@ func init() {
 			s.err("Wrong commands order")
 			return
 		}
-		user := findUser(s.userName, c.arg)
+		user := findUser(s.userName, c.arg, s.config)
 		if user == nil {
 			s.err("Auth failed")
 			s.userName = ""
@@ -61,7 +61,7 @@ func init() {
 		 * Lock and parse the user's box. If failed, reset back
 		 * to authentication phase.
 		 */
-		box, err := openBox(user)
+		box, err := openBox(user, s.config)
 		if err != nil {
 			s.err(err.Error())
 			s.userName = ""
@@ -296,8 +296,8 @@ func init() {
 }
 
 // Load a user's box, lock it and parse the messages list
-func openBox(user *userRec) (box *mailbox, err error) {
-	box, err = newBox(user)
+func openBox(user *userRec, config *serverConfig) (box *mailbox, err error) {
+	box, err = newBox(user, config)
 	if err != nil {
 		return
 	}

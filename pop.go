@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-func processPOP(conn net.Conn) {
-	s := newPopSession(conn)
+func processPOP(conn net.Conn, config *serverConfig) {
+	s := newPopSession(conn, config)
 	s.ok("Hello")
 
 	for {
@@ -59,12 +59,14 @@ type popState struct {
 	lastID   int
 	conn     net.Conn
 	r        *bufio.Reader
+	config   *serverConfig
 }
 
-func newPopSession(c net.Conn) *popState {
+func newPopSession(c net.Conn, config *serverConfig) *popState {
 	s := new(popState)
 	s.conn = c
 	s.r = bufio.NewReader(c)
+	s.config = config
 	return s
 }
 

@@ -7,10 +7,11 @@ import (
 
 func main() {
 
-	err := readConfig("conf")
+	config, err := readConfig("conf")
 	if err != nil {
 		log.Fatal(err)
 	}
+	debugLog = config.debug
 
 	err = createDir(config.maildir)
 	if err != nil {
@@ -19,11 +20,11 @@ func main() {
 
 	ok := false
 	if config.smtp != "" {
-		go server(config.smtp, processSMTP)
+		go server(config.smtp, processSMTP, config)
 		ok = true
 	}
 	if config.pop != "" {
-		go server(config.pop, processPOP)
+		go server(config.pop, processPOP, config)
 		ok = true
 	}
 	if !ok {
@@ -32,7 +33,7 @@ func main() {
 	select {}
 }
 
-func server(addr string, f func(net.Conn)) error {
+func server(addr string, f func(net.Conn, *serverConfig), config *serverConfig) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -46,6 +47,6 @@ func server(addr string, f func(net.Conn)) error {
 			continue
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
-		go f(conn)
+		go f(conn, config)
 	}
 }

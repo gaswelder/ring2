@@ -27,7 +27,7 @@ type mailbox struct {
 	path     string
 }
 
-func newBox(u *userRec) (*mailbox, error) {
+func newBox(u *userRec, config *serverConfig) (*mailbox, error) {
 	b := new(mailbox)
 	b.path = config.maildir + "/" + u.name
 	err := createDir(b.path)

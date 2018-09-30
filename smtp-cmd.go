@@ -137,7 +137,7 @@ func init() {
 			s.send(501, "Malformed forward-path")
 			return
 		}
-		code, str := checkPath(path)
+		code, str := checkPath(path, s.config)
 		s.send(code, str)
 		if code >= 300 || code < 200 {
 			return
@@ -167,7 +167,7 @@ func init() {
 		 * Example: Received: from GHI.ARPA by JKL.ARPA ; 27 Oct 81 15:27:39 PST
 		 */
 		text := fmt.Sprintf("Received: from %s by %s ; %s\r\n",
-			s.senderHost, config.hostname, formatDate())
+			s.senderHost, s.config.hostname, formatDate())
 
 		/*
 		 * Read the message
@@ -194,7 +194,7 @@ func init() {
 			text += line
 		}
 
-		if processMessage(s.draft, text) {
+		if processMessage(s.draft, text, s.config) {
 			s.send(250, "OK")
 		} else {
 			s.send(554, "Transaction failed")
@@ -224,7 +224,7 @@ func init() {
 			return
 		}
 
-		user, smtpErr := plainAuth(parts[1])
+		user, smtpErr := plainAuth(parts[1], s.config)
 		if smtpErr != nil {
 			s.send(smtpErr.code, smtpErr.message)
 			return
@@ -245,7 +245,7 @@ type smtpError struct {
 	message string
 }
 
-func plainAuth(arg string) (*userRec, *smtpError) {
+func plainAuth(arg string, config *serverConfig) (*userRec, *smtpError) {
 	// AGdhcwAxMjM= -> \0user\0pass
 	data, err := base64.StdEncoding.DecodeString(arg)
 	if err != nil {
@@ -260,7 +260,7 @@ func plainAuth(arg string) (*userRec, *smtpError) {
 	login := parts[1]
 	pass := parts[2]
 
-	return findUser(login, pass), nil
+	return findUser(login, pass, config), nil
 }
 
 /*
@@ -280,7 +280,7 @@ func splitAddress(addr string) (name string, host string, err error) {
 	return
 }
 
-func checkPath(p *path) (int, string) {
+func checkPath(p *path, config *serverConfig) (int, string) {
 	if len(p.hosts) > 0 {
 		return 551, "This server does not relay"
 	}
@@ -306,7 +306,7 @@ func checkPath(p *path) (int, string) {
 	return 550, "Unknown Recipient"
 }
 
-func processMessage(m *mail, text string) bool {
+func processMessage(m *mail, text string, config *serverConfig) bool {
 
 	ok := 0
 	rpath := m.sender
@@ -316,7 +316,7 @@ func processMessage(m *mail, text string) bool {
 		var name string
 		name, _, err = splitAddress(fpath.address)
 		if err == nil {
-			err = dispatchMail(text, name, rpath)
+			err = dispatchMail(text, name, rpath, config)
 		}
 		/*
 		 * If processing failed, send failure notification
@@ -330,7 +330,7 @@ func processMessage(m *mail, text string) bool {
 				continue
 			}
 
-			err = sendBounce(fpath, rpath)
+			err = sendBounce(fpath, rpath, config)
 		}
 
 		if err != nil {
@@ -343,14 +343,14 @@ func processMessage(m *mail, text string) bool {
 	return ok > 0
 }
 
-func dispatchMail(text string, name string, rpath *path) error {
+func dispatchMail(text string, name string, rpath *path, config *serverConfig) error {
 	log.Printf("Dispatch: %s\n", name)
 	/*
 	 * If it a user?
 	 */
 	user, ok := config.users[name]
 	if ok {
-		return storeMessage(text, rpath, user)
+		return storeMessage(text, rpath, user, config)
 	}
 
 	/*
@@ -360,7 +360,7 @@ func dispatchMail(text string, name string, rpath *path) error {
 	if list != nil {
 		ok := false
 		for _, user := range list {
-			err := dispatchMail(text, user.name, rpath)
+			err := dispatchMail(text, user.name, rpath, config)
 			if err == nil {
 				ok = true
 			}
@@ -380,8 +380,8 @@ func dispatchMail(text string, name string, rpath *path) error {
 /*
  * Store a message locally
  */
-func storeMessage(text string, rpath *path, u *userRec) error {
-	box, err := newBox(u)
+func storeMessage(text string, rpath *path, u *userRec, config *serverConfig) error {
+	box, err := newBox(u, config)
 	if err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func storeMessage(text string, rpath *path, u *userRec) error {
 	return err
 }
 
-func sendBounce(fpath, rpath *path) error {
+func sendBounce(fpath, rpath *path, config *serverConfig) error {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Date: %s\r\n", formatDate())
 	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.hostname)
@@ -408,13 +408,13 @@ func sendBounce(fpath, rpath *path) error {
 	/*
 	 * Specify null as reverse-path to prevent loops
 	 */
-	return sendMail(b.String(), rpath, nil)
+	return sendMail(b.String(), rpath, nil, config)
 }
 
 /*
  * Send a message using SMTP protocol
  */
-func sendMail(text string, fpath, rpath *path) error {
+func sendMail(text string, fpath, rpath *path, config *serverConfig) error {
 
 	if len(fpath.hosts) == 0 {
 		return errors.New("Empty forward-path")

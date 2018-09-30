@@ -7,7 +7,7 @@ import (
 	"github.com/gaswelder/cfg"
 )
 
-var config struct {
+type serverConfig struct {
 	debug    bool
 	hostname string
 	maildir  string
@@ -17,19 +17,17 @@ var config struct {
 	users    map[string]*userRec
 }
 
-func readConfig(path string) error {
-	/*
-	 * Init to default values
-	 */
-	config.debug = false
-	config.hostname = "localhost"
-	config.maildir = "./mail"
-	config.lists = make(map[string][]*userRec)
-	config.users = make(map[string]*userRec)
+func readConfig(path string) (*serverConfig, error) {
+	cnf := serverConfig{
+		hostname: "localhost",
+		maildir:  "./mail",
+		lists:    make(map[string][]*userRec),
+		users:    make(map[string]*userRec),
+	}
 
 	conf, err := cfg.ParseFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sec, ok := conf["server"]
@@ -37,17 +35,17 @@ func readConfig(path string) error {
 		for key, val := range sec {
 			switch key {
 			case "smtp":
-				config.smtp = val
+				cnf.smtp = val
 			case "pop":
-				config.pop = val
+				cnf.pop = val
 			case "maildir":
-				config.maildir = val
+				cnf.maildir = val
 			case "hostname":
-				config.hostname = val
+				cnf.hostname = val
 			case "debug":
-				config.debug = true
+				cnf.debug = true
 			default:
-				return fmt.Errorf("Unknown param %s", key)
+				return nil, fmt.Errorf("Unknown param %s", key)
 			}
 		}
 	}
@@ -56,9 +54,9 @@ func readConfig(path string) error {
 	if ok {
 		for key, val := range sec {
 			if val != "" {
-				return fmt.Errorf("Unexpected argument: %s %s", key, val)
+				return nil, fmt.Errorf("Unexpected argument: %s %s", key, val)
 			}
-			config.lists[key] = make([]*userRec, 0)
+			cnf.lists[key] = make([]*userRec, 0)
 		}
 	}
 
@@ -67,20 +65,20 @@ func readConfig(path string) error {
 		for key, val := range sec {
 			user, err := parseUserSpec(val)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			user.name = key
-			config.users[key] = user
+			cnf.users[key] = user
 			for _, listname := range user.lists {
-				_, ok := config.lists[listname]
+				_, ok := cnf.lists[listname]
 				if !ok {
-					return fmt.Errorf("Unknown list: %s", listname)
+					return nil, fmt.Errorf("Unknown list: %s", listname)
 				}
-				config.lists[listname] = append(config.lists[listname], user)
+				cnf.lists[listname] = append(cnf.lists[listname], user)
 			}
 		}
 	}
-	return nil
+	return &cnf, nil
 }
 
 func parseUserSpec(spec string) (*userRec, error) {

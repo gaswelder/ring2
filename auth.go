@@ -6,7 +6,7 @@ import (
 
 // Returns user record with given name and password.
 // Returns nil if there is no such user.
-func findUser(name, pass string) *userRec {
+func findUser(name, pass string, config *serverConfig) *userRec {
 	for _, user := range config.users {
 		if user.name != name {
 			continue

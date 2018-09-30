@@ -14,8 +14,8 @@ const smtpBadSequenceOfCommands = 503
 const smtpParameterNotImplemented = 504
 const smtpAuthInvalid = 535
 
-func processSMTP(conn net.Conn) {
-	s := newSession(conn)
+func processSMTP(conn net.Conn, config *serverConfig) {
+	s := newSession(conn, config)
 	s.send(220, "%s ready", config.hostname)
 
 	/*
@@ -65,12 +65,14 @@ type session struct {
 	r          *bufio.Reader
 	draft      *mail
 	user       *userRec
+	config     *serverConfig
 }
 
-func newSession(conn net.Conn) *session {
+func newSession(conn net.Conn, config *serverConfig) *session {
 	s := new(session)
 	s.conn = conn
 	s.r = bufio.NewReader(s.conn)
+	s.config = config
 	return s
 }
 
