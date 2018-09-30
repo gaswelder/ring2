@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"log"
 	"net"
 )
@@ -11,6 +12,9 @@ func processPOP(conn net.Conn, server *Server) {
 
 	for {
 		cmd, err := s.ReadCommand()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			s.Err(err.Error())
 			continue
@@ -31,5 +35,4 @@ func processPOP(conn net.Conn, server *Server) {
 			s.Err("Unknown command")
 		}
 	}
-	conn.Close()
 }

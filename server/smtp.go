@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"io"
 	"net"
 
 	"github.com/gaswelder/ring2/server/smtp"
@@ -22,6 +22,9 @@ func processSMTP(conn net.Conn, server *Server) {
 	 */
 	for {
 		cmd, err := s.ReadCommand()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			s.Send(500, err.Error())
 			continue
@@ -36,9 +39,6 @@ func processSMTP(conn net.Conn, server *Server) {
 			s.Send(500, "Unknown command")
 		}
 	}
-
-	conn.Close()
-	log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 }
 
 /*

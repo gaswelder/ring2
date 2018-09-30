@@ -53,6 +53,7 @@ func (s *Server) pop() error {
 		go func() {
 			processPOP(conn, s)
 			conn.Close()
+			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()
 	}
 }
@@ -74,6 +75,7 @@ func (s *Server) smtp() error {
 		go func() {
 			processSMTP(conn, s)
 			conn.Close()
+			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()
 	}
 }
