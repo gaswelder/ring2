@@ -17,17 +17,3 @@ func makeSession(c io.ReadWriter, auth AuthFunc) *session {
 		auth:       auth,
 	}
 }
-
-// func (s *popState) Close() error {
-// 	return s.inbox.Commit()
-// }
-
-// user := s.config.findUser(s.userName, password)
-// 		if user == nil {
-// 			s.Err("auth failed")
-// 			return
-// 		}
-// 		box, err := s.config.mailbox(user)
-// 		if err != nil {
-// 			return err
-// 		}
