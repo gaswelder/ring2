@@ -18,16 +18,6 @@ func (u *UserRec) mailbox(config *Config) (*mailbox.Mailbox, error) {
 }
 
 /*
- * Forward or reverse path
- */
-type path struct {
-	// zero or more lists of hostnames like foo.com
-	hosts []string
-	// address endpoint, like bob@example.net
-	address string
-}
-
-/*
  * A mail draft
  */
 type mail struct {

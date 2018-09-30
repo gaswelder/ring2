@@ -15,22 +15,6 @@ func formatDate() string {
 	return time.Now().Format(time.RFC822)
 }
 
-func formatPath(p *path) string {
-	s := "<"
-
-	if len(p.hosts) > 0 {
-		for i, host := range p.hosts {
-			if i > 0 {
-				s += ","
-				s += "@" + host
-			}
-		}
-		s += ":"
-	}
-	s += p.address + ">"
-	return s
-}
-
 // "<@ONE,@TWO:JOE@THREE>"
 // "<joe@three>"
 func parsePath(r *scanner.Scanner) (*path, error) {

@@ -385,7 +385,7 @@ func storeMessage(text string, rpath *path, u *UserRec, config *Config) error {
 	if err != nil {
 		return err
 	}
-	line := fmt.Sprintf("Return-Path: %s\r\n", formatPath(rpath))
+	line := fmt.Sprintf("Return-Path: %s\r\n", rpath.format())
 	err = box.Add(line + text)
 	return err
 }
@@ -425,13 +425,13 @@ func sendMail(text string, fpath, rpath *path, config *Config) error {
 	w.Expect(250)
 
 	if rpath != nil {
-		w.WriteLine("MAIL FROM:" + formatPath(rpath))
+		w.WriteLine("MAIL FROM:" + rpath.format())
 	} else {
 		w.WriteLine("MAIL FROM:<>")
 	}
 	w.Expect(250)
 
-	w.WriteLine("RCPT TO:" + formatPath(fpath))
+	w.WriteLine("RCPT TO:" + fpath.format())
 	w.Expect(250)
 
 	w.WriteLine("DATA")
