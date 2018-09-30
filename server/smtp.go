@@ -47,7 +47,7 @@ func processSMTP(conn net.Conn, server *Server) {
 type session struct {
 	*smtp.ReadWriter
 	senderHost string
-	draft      *mail
+	draft      *smtp.Mail
 	user       *UserRec
 	server     *Server
 }

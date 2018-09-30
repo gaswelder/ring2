@@ -113,7 +113,7 @@ func init() {
 			log.Println("MAIL params: " + p.Rest())
 		}
 
-		s.draft = newDraft(rpath)
+		s.draft = smtp.NewDraft(rpath)
 		s.Send(250, "OK")
 	})
 
@@ -143,7 +143,7 @@ func init() {
 		if code >= 300 || code < 200 {
 			return
 		}
-		s.draft.recipients = append(s.draft.recipients, path)
+		s.draft.Recipients = append(s.draft.Recipients, path)
 	})
 
 	/*
@@ -156,7 +156,7 @@ func init() {
 			return
 		}
 
-		if len(s.draft.recipients) == 0 {
+		if len(s.draft.Recipients) == 0 {
 			s.Send(503, "No recipients specified")
 			return
 		}
@@ -306,13 +306,13 @@ func checkPath(p *smtp.Path, config *Config) (int, string) {
 	return 550, "Unknown Recipient"
 }
 
-func processMessage(m *mail, text string, config *Config) bool {
+func processMessage(m *smtp.Mail, text string, config *Config) bool {
 
 	ok := 0
-	rpath := m.sender
+	rpath := m.Sender
 	var err error
 
-	for _, fpath := range m.recipients {
+	for _, fpath := range m.Recipients {
 		var name string
 		name, _, err = splitAddress(fpath.Address)
 		if err == nil {
