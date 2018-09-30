@@ -140,6 +140,24 @@ func (s *popState) markAsDeleted(msgid string) error {
 	return nil
 }
 
+func (s *popState) begin() error {
+	box, err := newBox(s.user, s.config)
+	if err != nil {
+		return err
+	}
+	err = box.lock()
+	if err != nil {
+		return err
+	}
+	err = box.parseMessages()
+	if err != nil {
+		return err
+	}
+	s.box = box
+	s.lastID = box.lastID
+	return nil
+}
+
 func (s *popState) commit() error {
 	if s.box == nil {
 		return nil

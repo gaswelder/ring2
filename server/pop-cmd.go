@@ -59,15 +59,11 @@ func init() {
 		 * Lock and parse the user's box. If failed, reset back
 		 * to authentication phase.
 		 */
-		box, err := openBox(user, s.config)
+		err := s.begin()
 		if err != nil {
 			s.err(err.Error())
-			s.userName = ""
-			s.user = nil
 			return
 		}
-		s.box = box
-		s.lastID = box.lastID
 		s.ok("")
 	})
 
@@ -280,20 +276,6 @@ func init() {
 	popCmd("RPOP", func(s *popState, c *command) {
 		s.err("How such a command got into the RFC at all?")
 	})
-}
-
-// Load a user's box, lock it and parse the messages list
-func openBox(user *UserRec, config *Config) (box *mailbox, err error) {
-	box, err = newBox(user, config)
-	if err != nil {
-		return
-	}
-	err = box.lock()
-	if err != nil {
-		return
-	}
-	err = box.parseMessages()
-	return
 }
 
 func checkAuth(s *popState) bool {
