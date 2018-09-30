@@ -5,13 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net"
-)
 
-const smtpAuthOK = 235
-const smtpParameterSyntaxError = 501
-const smtpBadSequenceOfCommands = 503
-const smtpParameterNotImplemented = 504
-const smtpAuthInvalid = 535
+	"github.com/gaswelder/ring2/server/smtp"
+)
 
 func processSMTP(conn net.Conn, server *Server) {
 	s := newSession(conn, server)
@@ -84,33 +80,6 @@ func (s *session) send(code int, format string, args ...interface{}) {
 	fmt.Fprintf(s.conn, "%d %s\r\n", code, line)
 }
 
-type smtpWriter struct {
-	code     int
-	lastLine string
-	conn     net.Conn
-}
-
-func (s *session) begin(code int) *smtpWriter {
-	w := new(smtpWriter)
-	w.code = code
-	w.conn = s.conn
-	return w
-}
-
-func (w *smtpWriter) send(format string, args ...interface{}) {
-	line := fmt.Sprintf(format, args...)
-	if w.lastLine != "" {
-		debMsg("> %d-%s", w.code, w.lastLine)
-		fmt.Fprintf(w.conn, "%d-%s\r\n", w.code, w.lastLine)
-	}
-	w.lastLine = line
-}
-
-func (w *smtpWriter) end() {
-	if w.lastLine == "" {
-		return
-	}
-	debMsg("> %d %s", w.code, w.lastLine)
-	fmt.Fprintf(w.conn, "%d %s\r\n", w.code, w.lastLine)
-	w.lastLine = ""
+func (s *session) begin(code int) *smtp.Writer {
+	return smtp.NewWriter(code, s.conn)
 }

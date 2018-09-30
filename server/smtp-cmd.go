@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gaswelder/ring2/scanner"
+	"github.com/gaswelder/ring2/server/smtp"
 )
 
 /*
@@ -68,11 +69,11 @@ func init() {
 
 		// Send greeting and a list of supported extensions
 		w := s.begin(250)
-		w.send("Hello, %s", cmd.arg)
+		w.Send("Hello, %s", cmd.arg)
 		for name := range smtpExts {
-			w.send("%s", name)
+			w.Send("%s", name)
 		}
-		w.end()
+		w.End()
 	})
 
 	/*
@@ -214,13 +215,13 @@ func init() {
 
 		// Here we are prepared to deal only with the "PLAIN <...>"" case.
 		if len(parts) != 2 || parts[0] != "PLAIN" {
-			s.send(smtpParameterNotImplemented, "Only PLAIN <...> is supported")
+			s.send(smtp.ParameterNotImplemented, "Only PLAIN <...> is supported")
 			return
 		}
 
 		// If already authorized, reject
 		if s.user != nil {
-			s.send(smtpBadSequenceOfCommands, "Already authorized")
+			s.send(smtp.BadSequenceOfCommands, "Already authorized")
 			return
 		}
 
@@ -231,12 +232,12 @@ func init() {
 		}
 
 		if user == nil {
-			s.send(smtpAuthInvalid, "Authentication credentials invalid")
+			s.send(smtp.AuthInvalid, "Authentication credentials invalid")
 			return
 		}
 
 		s.user = user
-		s.send(smtpAuthOK, "Authentication succeeded")
+		s.send(smtp.AuthOK, "Authentication succeeded")
 	})
 }
 
@@ -249,12 +250,12 @@ func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
 	// AGdhcwAxMjM= -> \0user\0pass
 	data, err := base64.StdEncoding.DecodeString(arg)
 	if err != nil {
-		return nil, &smtpError{smtpParameterSyntaxError, err.Error()}
+		return nil, &smtpError{smtp.ParameterSyntaxError, err.Error()}
 	}
 
 	parts := strings.Split(string(data), "\x00")
 	if len(parts) != 3 {
-		return nil, &smtpError{smtpParameterSyntaxError, "Could not parse the auth string"}
+		return nil, &smtpError{smtp.ParameterSyntaxError, "Could not parse the auth string"}
 	}
 
 	login := parts[1]
