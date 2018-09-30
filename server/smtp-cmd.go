@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -10,6 +10,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/gaswelder/ring2/scanner"
 )
 
 /*
@@ -93,7 +95,7 @@ func init() {
 			return
 		}
 
-		p := newScanner(cmd.arg)
+		p := scanner.New(cmd.arg)
 		if !p.SkipStri("FROM:") {
 			s.send(501, "The format is: MAIL FROM:<reverse-path>[ <params>]")
 			return
@@ -108,8 +110,8 @@ func init() {
 
 		// If <params> part follows, read it,
 		// but don't do anything with it
-		if p.more() && p.next() == ' ' {
-			log.Println("MAIL params: " + p.rest())
+		if p.More() && p.Next() == ' ' {
+			log.Println("MAIL params: " + p.Rest())
 		}
 
 		s.draft = newDraft(rpath)
@@ -126,7 +128,7 @@ func init() {
 			return
 		}
 
-		p := newScanner(cmd.arg)
+		p := scanner.New(cmd.arg)
 		if !p.SkipStri("TO:") {
 			s.send(501, "The format is: RCPT TO:<forward-path>")
 			return
@@ -167,7 +169,7 @@ func init() {
 		 * Example: Received: from GHI.ARPA by JKL.ARPA ; 27 Oct 81 15:27:39 PST
 		 */
 		text := fmt.Sprintf("Received: from %s by %s ; %s\r\n",
-			s.senderHost, s.config.hostname, formatDate())
+			s.senderHost, s.config.Hostname, formatDate())
 
 		/*
 		 * Read the message
@@ -245,7 +247,7 @@ type smtpError struct {
 	message string
 }
 
-func plainAuth(arg string, config *serverConfig) (*userRec, *smtpError) {
+func plainAuth(arg string, config *Config) (*UserRec, *smtpError) {
 	// AGdhcwAxMjM= -> \0user\0pass
 	data, err := base64.StdEncoding.DecodeString(arg)
 	if err != nil {
@@ -280,7 +282,7 @@ func splitAddress(addr string) (name string, host string, err error) {
 	return
 }
 
-func checkPath(p *path, config *serverConfig) (int, string) {
+func checkPath(p *path, config *Config) (int, string) {
 	if len(p.hosts) > 0 {
 		return 551, "This server does not relay"
 	}
@@ -289,16 +291,16 @@ func checkPath(p *path, config *serverConfig) (int, string) {
 	if err != nil {
 		return 501, err.Error()
 	}
-	if !strings.EqualFold(host, config.hostname) {
+	if !strings.EqualFold(host, config.Hostname) {
 		return 550, "Not a local address"
 	}
 
-	_, ok := config.lists[name]
+	_, ok := config.Lists[name]
 	if ok {
 		return 250, "OK"
 	}
 
-	_, ok = config.users[name]
+	_, ok = config.Users[name]
 	if ok {
 		return 250, "OK"
 	}
@@ -306,7 +308,7 @@ func checkPath(p *path, config *serverConfig) (int, string) {
 	return 550, "Unknown Recipient"
 }
 
-func processMessage(m *mail, text string, config *serverConfig) bool {
+func processMessage(m *mail, text string, config *Config) bool {
 
 	ok := 0
 	rpath := m.sender
@@ -343,12 +345,12 @@ func processMessage(m *mail, text string, config *serverConfig) bool {
 	return ok > 0
 }
 
-func dispatchMail(text string, name string, rpath *path, config *serverConfig) error {
+func dispatchMail(text string, name string, rpath *path, config *Config) error {
 	log.Printf("Dispatch: %s\n", name)
 	/*
 	 * If it a user?
 	 */
-	user, ok := config.users[name]
+	user, ok := config.Users[name]
 	if ok {
 		return storeMessage(text, rpath, user, config)
 	}
@@ -356,11 +358,11 @@ func dispatchMail(text string, name string, rpath *path, config *serverConfig) e
 	/*
 	 * A list?
 	 */
-	list, _ := config.lists[name]
+	list, _ := config.Lists[name]
 	if list != nil {
 		ok := false
 		for _, user := range list {
-			err := dispatchMail(text, user.name, rpath, config)
+			err := dispatchMail(text, user.Name, rpath, config)
 			if err == nil {
 				ok = true
 			}
@@ -380,7 +382,7 @@ func dispatchMail(text string, name string, rpath *path, config *serverConfig) e
 /*
  * Store a message locally
  */
-func storeMessage(text string, rpath *path, u *userRec, config *serverConfig) error {
+func storeMessage(text string, rpath *path, u *UserRec, config *Config) error {
 	box, err := newBox(u, config)
 	if err != nil {
 		return err
@@ -397,10 +399,10 @@ func storeMessage(text string, rpath *path, u *userRec, config *serverConfig) er
 	return err
 }
 
-func sendBounce(fpath, rpath *path, config *serverConfig) error {
+func sendBounce(fpath, rpath *path, config *Config) error {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Date: %s\r\n", formatDate())
-	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.hostname)
+	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.Hostname)
 	fmt.Fprintf(&b, "To: %s\r\n", rpath.address)
 	fmt.Fprintf(&b, "Subject: mail delivery failure\r\n")
 	fmt.Fprintf(&b, "\r\n")
@@ -414,7 +416,7 @@ func sendBounce(fpath, rpath *path, config *serverConfig) error {
 /*
  * Send a message using SMTP protocol
  */
-func sendMail(text string, fpath, rpath *path, config *serverConfig) error {
+func sendMail(text string, fpath, rpath *path, config *Config) error {
 
 	if len(fpath.hosts) == 0 {
 		return errors.New("Empty forward-path")
@@ -428,7 +430,7 @@ func sendMail(text string, fpath, rpath *path, config *serverConfig) error {
 	w := newTpClient(conn)
 	w.Expect(250)
 
-	w.WriteLine("HELO %s", config.hostname)
+	w.WriteLine("HELO %s", config.Hostname)
 	w.Expect(250)
 
 	if rpath != nil {

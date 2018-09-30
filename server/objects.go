@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"io/ioutil"
@@ -7,11 +7,11 @@ import (
 /*
  * User record
  */
-type userRec struct {
-	name     string
-	pwhash   string
-	password string
-	lists    []string
+type UserRec struct {
+	Name     string
+	Pwhash   string
+	Password string
+	Lists    []string
 }
 
 /*

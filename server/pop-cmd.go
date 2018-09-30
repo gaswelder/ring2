@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -296,7 +296,7 @@ func init() {
 }
 
 // Load a user's box, lock it and parse the messages list
-func openBox(user *userRec, config *serverConfig) (box *mailbox, err error) {
+func openBox(user *UserRec, config *Config) (box *mailbox, err error) {
 	box, err = newBox(user, config)
 	if err != nil {
 		return

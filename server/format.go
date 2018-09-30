@@ -1,4 +1,4 @@
-package main
+package server
 
 /*
  * Parsing and formatting functions
@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/gaswelder/ring2/scanner"
 )
 
 /*
@@ -17,23 +19,23 @@ func parseCommand(line string) (*command, error) {
 	var err error
 	var name, arg string
 
-	r := newScanner(line)
+	r := scanner.New(line)
 
 	// Command name: a sequence of ASCII alphabetic characters.
-	for isAlpha(r.next()) {
-		name += string(toUpper(r.get()))
+	for isAlpha(r.Next()) {
+		name += string(toUpper(r.Get()))
 	}
 
 	// If space follows, read the argument
-	if r.next() == ' ' {
-		r.get()
-		for r.more() && r.next() != '\r' {
-			arg += string(r.get())
+	if r.Next() == ' ' {
+		r.Get()
+		for r.More() && r.Next() != '\r' {
+			arg += string(r.Get())
 		}
 	}
 
 	// Expect "\r\n"
-	if r.get() != '\r' || r.get() != '\n' {
+	if r.Get() != '\r' || r.Get() != '\n' {
 		err = errors.New("<CRLF> expected")
 	}
 
@@ -66,22 +68,22 @@ func formatPath(p *path) string {
 
 // "<@ONE,@TWO:JOE@THREE>"
 // "<joe@three>"
-func parsePath(r *scanner) (*path, error) {
+func parsePath(r *scanner.Scanner) (*path, error) {
 
 	p := new(path)
 	p.hosts = make([]string, 0)
 
-	if !r.expect('<') {
-		return nil, r.err
+	if !r.Expect('<') {
+		return nil, r.Err()
 	}
 
-	if r.next() == '@' {
+	if r.Next() == '@' {
 		for {
-			r.expect('@')
+			r.Expect('@')
 			host := readName(r)
 			p.hosts = append(p.hosts, host)
 
-			ch := r.get()
+			ch := r.Get()
 			if ch == ',' {
 				continue
 			}
@@ -94,21 +96,21 @@ func parsePath(r *scanner) (*path, error) {
 	}
 
 	addr := readName(r) + "@"
-	r.expect('@')
+	r.Expect('@')
 	addr += readName(r)
-	r.expect('>')
+	r.Expect('>')
 
 	p.address = addr
-	return p, r.err
+	return p, r.Err()
 }
 
-func readName(r *scanner) string {
+func readName(r *scanner.Scanner) string {
 	name := ""
 	for {
-		ch := r.next()
+		ch := r.Next()
 		if isAlpha(ch) || isDigit(ch) || ch == '.' || ch == '-' {
 			name += string(ch)
-			r.get()
+			r.Get()
 			continue
 		}
 		break

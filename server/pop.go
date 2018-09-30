@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func processPOP(conn net.Conn, config *serverConfig) {
+func processPOP(conn net.Conn, config *Config) {
 	s := newPopSession(conn, config)
 	s.ok("Hello")
 
@@ -54,15 +54,15 @@ func processPOP(conn net.Conn, config *serverConfig) {
  */
 type popState struct {
 	userName string
-	user     *userRec
+	user     *UserRec
 	box      *mailbox
 	lastID   int
 	conn     net.Conn
 	r        *bufio.Reader
-	config   *serverConfig
+	config   *Config
 }
 
-func newPopSession(c net.Conn, config *serverConfig) *popState {
+func newPopSession(c net.Conn, config *Config) *popState {
 	s := new(popState)
 	s.conn = c
 	s.r = bufio.NewReader(c)

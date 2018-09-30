@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -27,9 +27,9 @@ type mailbox struct {
 	path     string
 }
 
-func newBox(u *userRec, config *serverConfig) (*mailbox, error) {
+func newBox(u *UserRec, config *Config) (*mailbox, error) {
 	b := new(mailbox)
-	b.path = config.maildir + "/" + u.name
+	b.path = config.Maildir + "/" + u.Name
 	err := createDir(b.path)
 	if err != nil {
 		return nil, err
@@ -205,4 +205,12 @@ func (b *mailbox) purge() error {
 
 	b.messages = l
 	return nil
+}
+
+func createDir(path string) error {
+	stat, err := os.Stat(path)
+	if stat != nil && err == nil {
+		return nil
+	}
+	return os.MkdirAll(path, 0755)
 }
