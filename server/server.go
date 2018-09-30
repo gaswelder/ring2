@@ -5,21 +5,31 @@ import (
 	"net"
 )
 
-func Run(config *Config) {
-	debugLog = config.Debug
+type Server struct {
+	config *Config
+}
 
-	err := createDir(config.Maildir)
+func New(config *Config) *Server {
+	return &Server{
+		config: config,
+	}
+}
+
+func (s *Server) Run() {
+	debugLog = s.config.Debug
+
+	err := createDir(s.config.Maildir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	ok := false
-	if config.Smtp != "" {
-		go run(config.Smtp, processSMTP, config)
+	if s.config.Smtp != "" {
+		go run(s.config.Smtp, processSMTP, s.config)
 		ok = true
 	}
-	if config.Pop != "" {
-		go run(config.Pop, processPOP, config)
+	if s.config.Pop != "" {
+		go run(s.config.Pop, processPOP, s.config)
 		ok = true
 	}
 	if !ok {

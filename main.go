@@ -7,11 +7,11 @@ import (
 )
 
 func main() {
-
 	config, err := readConfig("conf")
 	if err != nil {
 		log.Fatal(err)
 	}
-	server.Run(config)
+	s := server.New(config)
+	s.Run()
 	select {}
 }
