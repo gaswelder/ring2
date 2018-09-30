@@ -316,9 +316,21 @@ func processMessage(m *smtp.Mail, text string, config *Config) bool {
 
 func dispatchMail(text string, name string, rpath *smtp.Path, config *Config) error {
 	log.Printf("Dispatch: %s\n", name)
-	/*
-	 * If it a user?
-	 */
+
+	// If the destination address is a list, recurse into sending
+	// to each of the participants.
+	list, _ := config.Lists[name]
+	if list != nil {
+		for _, user := range list {
+			err := dispatchMail(text, user.Name, rpath, config)
+			if err != nil {
+				log.Printf("List %s: dispatch to %s failed: %s", name, user.Name, err.Error())
+			}
+		}
+		return nil
+	}
+
+	// For a user destination work as usual.
 	user, ok := config.Users[name]
 	if ok {
 		box, err := config.mailbox(user)
@@ -327,24 +339,6 @@ func dispatchMail(text string, name string, rpath *smtp.Path, config *Config) er
 		}
 		line := fmt.Sprintf("Return-Path: %s\r\n", rpath.Format())
 		return box.Add(line + text)
-	}
-
-	/*
-	 * A list?
-	 */
-	list, _ := config.Lists[name]
-	if list != nil {
-		ok := false
-		for _, user := range list {
-			err := dispatchMail(text, user.Name, rpath, config)
-			if err == nil {
-				ok = true
-			}
-		}
-		if !ok {
-			return fmt.Errorf("Dispatch to list '%s' failed", name)
-		}
-		return nil
 	}
 
 	/*
