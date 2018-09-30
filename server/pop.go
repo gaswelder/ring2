@@ -10,14 +10,7 @@ func processPOP(conn net.Conn, server *Server) {
 	s.ok("Hello")
 
 	for {
-		line, err := s.r.ReadString('\n')
-		if err != nil {
-			log.Println(err)
-			break
-		}
-		debMsg(line)
-
-		cmd, err := parseCommand(line)
+		cmd, err := s.readCommand()
 		if err != nil {
 			s.err(err.Error())
 			continue
