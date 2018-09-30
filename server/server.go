@@ -23,27 +23,17 @@ func (s *Server) Run() {
 		log.Fatal(err)
 	}
 
-	ok := false
-	if s.config.Smtp != "" {
-		go run(s.config.Smtp, processSMTP, s.config)
-		ok = true
-	}
-	if s.config.Pop != "" {
-		go run(s.config.Pop, processPOP, s.config)
-		ok = true
-	}
-	if !ok {
-		log.Fatal("Both SMTP and POP disabled")
-	}
+	go s.smtp()
+	go s.pop()
 }
 
-func run(addr string, f func(net.Conn, *Config), config *Config) error {
-	ln, err := net.Listen("tcp", addr)
+func (s *Server) pop() error {
+	ln, err := net.Listen("tcp", s.config.Pop)
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Listening on %s\n", addr)
+	log.Printf("POP: listening on %s\n", s.config.Pop)
+	defer ln.Close()
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -51,6 +41,30 @@ func run(addr string, f func(net.Conn, *Config), config *Config) error {
 			continue
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
-		go f(conn, config)
+		go func() {
+			processPOP(conn, s.config)
+			conn.Close()
+		}()
+	}
+}
+
+func (s *Server) smtp() error {
+	ln, err := net.Listen("tcp", s.config.Smtp)
+	if err != nil {
+		return err
+	}
+	log.Printf("SMTP: listening on %s\n", s.config.Smtp)
+	defer ln.Close()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		log.Printf("%s connected\n", conn.RemoteAddr().String())
+		go func() {
+			processSMTP(conn, s.config)
+			conn.Close()
+		}()
 	}
 }
