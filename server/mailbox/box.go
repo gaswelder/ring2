@@ -2,32 +2,22 @@ package mailbox
 
 import (
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
-/*
- * A mailbox is a directory with message files named in some
- * increasing manner (using time, for example). There is also a file
- * "last" which contains the filename of the message that was accessed
- * last.
- *
- * When a POP session in started, all messages are assigned numbers
- * starting from 1. The "last id" in the session then has to be derived
- * from the name. It is also possible that the file named in the "last"
- * was deleted, so in that case the "last id" will be zero.
- */
-
+// Mailbox is a directory with message files and a designated "last
+// retrieved" message.
 type Mailbox struct {
 	path string
 }
 
+// New returns a mailbox that keeps its data in the
+// given directory.
 func New(path string) (*Mailbox, error) {
 	box := &Mailbox{path}
 	err := createDir(path)
@@ -46,13 +36,13 @@ func (a kludge) Less(i, j int) bool {
 	return strings.Compare(a[i].Name(), a[j].Name()) == -1
 }
 
+// List returns a list of messages stored in this mailbox.
 func (b *Mailbox) List() ([]*Message, error) {
-	/*
-	 * Make sure the directory exists
-	 */
-	err := createDir(b.path)
-	if err != nil {
-		return nil, err
+	// If the directory doesn't exist, we assume that this mailbox simple
+	// haven't been written to, and return an empty list.
+	_, err := os.Stat(b.path)
+	if os.IsNotExist(err) {
+		return make([]*Message, 0), nil
 	}
 
 	/*
@@ -115,12 +105,6 @@ func (b *Mailbox) Remove(msg *Message) error {
 }
 
 func (b *Mailbox) Add(text string) error {
-	err := b.lock()
-	if err != nil {
-		return err
-	}
-	defer b.unlock()
-
 	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
 	return b.writeFile(name, text)
 }
@@ -195,35 +179,12 @@ func (b *Mailbox) readFile(name string) (string, error) {
 
 // Writes data to a file in the directory
 func (b *Mailbox) writeFile(name string, data string) error {
+	err := createDir(b.path)
+	if err != nil {
+		return err
+	}
 	path := b.path + "/" + name
 	return ioutil.WriteFile(path, []byte(data), 0600)
-}
-
-var register struct {
-	sync.Mutex
-	boxes map[string]bool
-}
-
-func init() {
-	register.boxes = make(map[string]bool)
-}
-
-func (b *Mailbox) lock() error {
-	register.Lock()
-	defer register.Unlock()
-
-	_, ok := register.boxes[b.path]
-	if ok {
-		return errors.New("Busy")
-	}
-	return nil
-}
-
-func (b *Mailbox) unlock() error {
-	register.Lock()
-	defer register.Unlock()
-	delete(register.boxes, b.path)
-	return nil
 }
 
 // Update the 'last' to point to the message with the given id
