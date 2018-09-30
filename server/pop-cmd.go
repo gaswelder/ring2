@@ -75,7 +75,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		count, size, err := s.inbox.stat()
+		count, size, err := s.inbox.Stat()
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -96,8 +96,8 @@ func init() {
 		 */
 		if c.Arg == "" {
 			s.OK("List follows")
-			for _, entry := range s.inbox.entries() {
-				s.Send("%d %d", entry.id, entry.msg.Size())
+			for _, entry := range s.inbox.Entries() {
+				s.Send("%d %d", entry.Id, entry.Msg.Size())
 			}
 			s.Send(".")
 			return
@@ -106,13 +106,13 @@ func init() {
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		msg := s.inbox.findEntryByID(c.Arg)
-		if msg == nil {
+		entry := s.inbox.FindEntryByID(c.Arg)
+		if entry == nil {
 			s.Err("no such message")
 			return
 		}
 
-		s.OK("%d %d", msg.id, msg.msg.Size())
+		s.OK("%d %d", entry.Id, entry.Msg.Size())
 	})
 
 	/*
@@ -123,20 +123,20 @@ func init() {
 			return
 		}
 
-		entry := s.inbox.findEntryByID(c.Arg)
+		entry := s.inbox.FindEntryByID(c.Arg)
 		if entry == nil {
 			s.Err("no such message")
 			return
 		}
 
-		data, err := entry.msg.Content()
+		data, err := entry.Msg.Content()
 		if err != nil {
 			s.Err(err.Error())
 			return
 		}
-		s.OK("%d octets", entry.msg.Size())
+		s.OK("%d octets", entry.Msg.Size())
 		s.SendData(data)
-		s.inbox.markRetrieved(entry)
+		s.inbox.MarkRetrieved(entry)
 	})
 
 	/*
@@ -146,7 +146,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		err := s.inbox.markAsDeleted(c.Arg)
+		err := s.inbox.MarkAsDeleted(c.Arg)
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -171,7 +171,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.OK("%d", s.inbox.lastID)
+		s.OK("%d", s.inbox.LastID())
 	})
 
 	/*
@@ -181,7 +181,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.inbox.reset()
+		s.inbox.Reset()
 		s.OK("")
 	})
 
@@ -198,19 +198,19 @@ func init() {
 		}
 		if c.Arg == "" {
 			s.OK("")
-			for _, entry := range s.inbox.entries() {
-				s.Send("%d %s", entry.id, entry.msg.Filename())
+			for _, entry := range s.inbox.Entries() {
+				s.Send("%d %s", entry.Id, entry.Msg.Filename())
 			}
 			s.Send(".")
 			return
 		}
 
-		msg := s.inbox.findEntryByID(c.Arg)
+		msg := s.inbox.FindEntryByID(c.Arg)
 		if msg == nil {
 			s.Err("no such message")
 			return
 		}
-		s.OK("%d %s", msg.id, msg.msg.Filename())
+		s.OK("%d %s", msg.Id, msg.Msg.Filename())
 	})
 
 	/*
@@ -226,13 +226,13 @@ func init() {
 			return
 		}
 
-		entry := s.inbox.findEntryByID(id)
+		entry := s.inbox.FindEntryByID(id)
 		if entry == nil {
 			s.Err("No such message")
 			return
 		}
 
-		text, err := entry.msg.Content()
+		text, err := entry.Msg.Content()
 		if err != nil {
 			s.Err(err.Error())
 			return

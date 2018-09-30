@@ -1,4 +1,4 @@
-package server
+package pop
 
 import (
 	"errors"
@@ -13,18 +13,22 @@ import (
 // from the mailbox plus session-related data like ID
 // and the `deleted` flag.
 type popMessageEntry struct {
-	id      int
-	msg     *mailbox.Message
+	Id      int
+	Msg     *mailbox.Message
 	deleted bool
 }
 
-type inboxView struct {
+type InboxView struct {
 	box         *mailbox.Mailbox
 	messageList []*popMessageEntry
 	lastID      int
 }
 
-func newInboxView(box *mailbox.Mailbox) (*inboxView, error) {
+func (i *InboxView) LastID() int {
+	return i.lastID
+}
+
+func NewInboxView(box *mailbox.Mailbox) (*InboxView, error) {
 	// List the letters in the given box and assign them
 	// session identifiers.
 	id := 0
@@ -37,13 +41,13 @@ func newInboxView(box *mailbox.Mailbox) (*inboxView, error) {
 		id++
 		log.Println(id, msg)
 		messageList = append(messageList, &popMessageEntry{
-			id:      id,
-			msg:     msg,
+			Id:      id,
+			Msg:     msg,
 			deleted: false,
 		})
 	}
 
-	v := &inboxView{
+	v := &InboxView{
 		box:         box,
 		messageList: messageList,
 	}
@@ -56,7 +60,7 @@ func newInboxView(box *mailbox.Mailbox) (*inboxView, error) {
 	return v, nil
 }
 
-func (v *inboxView) resetLastID() error {
+func (v *InboxView) resetLastID() error {
 	last, err := v.box.LastRetrievedMessage()
 	if err != nil {
 		return err
@@ -66,15 +70,15 @@ func (v *inboxView) resetLastID() error {
 		return nil
 	}
 	for _, entry := range v.messageList {
-		if entry.msg.Filename() == last.Filename() {
-			v.lastID = entry.id
+		if entry.Msg.Filename() == last.Filename() {
+			v.lastID = entry.Id
 			return nil
 		}
 	}
 	return errors.New("failed to find the lastID message")
 }
 
-func (v *inboxView) entries() []*popMessageEntry {
+func (v *InboxView) Entries() []*popMessageEntry {
 	list := make([]*popMessageEntry, 0)
 	for _, msg := range v.messageList {
 		if msg.deleted {
@@ -85,7 +89,7 @@ func (v *inboxView) entries() []*popMessageEntry {
 	return list
 }
 
-func (v *inboxView) reset() error {
+func (v *InboxView) Reset() error {
 	// Reset all deleted flags
 	for _, entry := range v.messageList {
 		entry.deleted = false
@@ -94,30 +98,13 @@ func (v *inboxView) reset() error {
 	return err
 }
 
-func (v *inboxView) markRetrieved(entry *popMessageEntry) {
-	if entry.id > v.lastID {
-		v.lastID = entry.id
+func (v *InboxView) MarkRetrieved(entry *popMessageEntry) {
+	if entry.Id > v.lastID {
+		v.lastID = entry.Id
 	}
 }
 
-func (v *inboxView) getMessage(arg string) (*mailbox.Message, error) {
-	if arg == "" {
-		return nil, errors.New("Missing argument")
-	}
-	id, err := strconv.Atoi(arg)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range v.messageList {
-		if entry.id == id && !entry.deleted {
-			return entry.msg, nil
-		}
-	}
-	return nil, errors.New("No such message")
-}
-
-func (v *inboxView) findEntryByID(msgid string) *popMessageEntry {
+func (v *InboxView) FindEntryByID(msgid string) *popMessageEntry {
 	if msgid == "" {
 		return nil
 	}
@@ -126,15 +113,15 @@ func (v *inboxView) findEntryByID(msgid string) *popMessageEntry {
 		return nil
 	}
 	for _, entry := range v.messageList {
-		if entry.id == id {
+		if entry.Id == id {
 			return entry
 		}
 	}
 	return nil
 }
 
-func (v *inboxView) markAsDeleted(msgid string) error {
-	e := v.findEntryByID(msgid)
+func (v *InboxView) MarkAsDeleted(msgid string) error {
+	e := v.FindEntryByID(msgid)
 	if e == nil {
 		return errors.New("no such message")
 	}
@@ -142,37 +129,37 @@ func (v *inboxView) markAsDeleted(msgid string) error {
 	return nil
 }
 
-func (v *inboxView) commit() error {
+func (v *InboxView) Commit() error {
 	if v.box == nil {
 		return nil
 	}
 	last := v.lastRetrievedEntry()
 	if last != nil {
-		v.box.SetLast(last.msg)
+		v.box.SetLast(last.Msg)
 	}
 	err := v.purge()
 	return err
 }
 
-func (v *inboxView) lastRetrievedEntry() *popMessageEntry {
-	for _, entry := range v.entries() {
-		if entry.id == v.lastID {
+func (v *InboxView) lastRetrievedEntry() *popMessageEntry {
+	for _, entry := range v.Entries() {
+		if entry.Id == v.lastID {
 			return entry
 		}
 	}
 	return nil
 }
 
-func (v *inboxView) stat() (count int, size int64, err error) {
-	for _, msg := range v.entries() {
+func (v *InboxView) Stat() (count int, size int64, err error) {
+	for _, entry := range v.Entries() {
 		count++
-		size += msg.msg.Size()
+		size += entry.Msg.Size()
 	}
 	return count, size, err
 }
 
 // Remove messages marked to be deleted
-func (v *inboxView) purge() error {
+func (v *InboxView) purge() error {
 	l := make([]*popMessageEntry, 0)
 
 	for _, entry := range v.messageList {
@@ -180,7 +167,7 @@ func (v *inboxView) purge() error {
 			l = append(l, entry)
 			continue
 		}
-		err := v.box.Remove(entry.msg)
+		err := v.box.Remove(entry.Msg)
 		if err != nil {
 			return err
 		}

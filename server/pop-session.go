@@ -13,7 +13,7 @@ import (
 type popState struct {
 	userName string
 	server   *Server
-	inbox    *inboxView
+	inbox    *pop.InboxView
 	*pop.ReadWriter
 }
 
@@ -33,11 +33,15 @@ func (s *popState) begin(user *UserRec) error {
 		return err
 	}
 
-	m, err := newInboxView(box)
+	m, err := pop.NewInboxView(box)
 	if err != nil {
 		return err
 	}
 
 	s.inbox = m
 	return nil
+}
+
+func (s *popState) end() error {
+	return s.inbox.Commit()
 }
