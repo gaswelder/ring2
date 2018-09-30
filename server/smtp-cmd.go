@@ -138,11 +138,30 @@ func init() {
 			s.Send(501, "Malformed forward-path")
 			return
 		}
-		code, str := checkPath(path, s.server.config)
-		s.Send(code, str)
-		if code >= 300 || code < 200 {
+
+		if len(path.Hosts) > 0 {
+			s.Send(551, "This server does not relay")
 			return
 		}
+
+		name, host, err := splitAddress(path.Address)
+		if err != nil {
+			s.Send(501, err.Error())
+			return
+		}
+
+		if !strings.EqualFold(host, s.server.config.Hostname) {
+			s.Send(550, "Not a local address")
+			return
+		}
+
+		_, ok1 := s.server.config.Lists[name]
+		_, ok2 := s.server.config.Users[name]
+		if !ok1 && !ok2 {
+			s.Send(550, "Unknown Recipient")
+			return
+		}
+		s.Send(250, "OK")
 		s.draft.Recipients = append(s.draft.Recipients, path)
 	})
 
@@ -278,32 +297,6 @@ func splitAddress(addr string) (name string, host string, err error) {
 	name = addr[:pos]
 	host = addr[pos+1:]
 	return
-}
-
-func checkPath(p *smtp.Path, config *Config) (int, string) {
-	if len(p.Hosts) > 0 {
-		return 551, "This server does not relay"
-	}
-
-	name, host, err := splitAddress(p.Address)
-	if err != nil {
-		return 501, err.Error()
-	}
-	if !strings.EqualFold(host, config.Hostname) {
-		return 550, "Not a local address"
-	}
-
-	_, ok := config.Lists[name]
-	if ok {
-		return 250, "OK"
-	}
-
-	_, ok = config.Users[name]
-	if ok {
-		return 250, "OK"
-	}
-
-	return 550, "Unknown Recipient"
 }
 
 func processMessage(m *smtp.Mail, text string, config *Config) bool {
