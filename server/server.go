@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 	"os"
+
+	"github.com/gaswelder/ring2/server/pop"
 )
 
 type Server struct {
@@ -51,7 +53,8 @@ func runPOP(config *Config) error {
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go func() {
-			processPOP(conn, config)
+			s := newPopSession(conn, config)
+			pop.Process(s)
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()

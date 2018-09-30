@@ -1,15 +1,12 @@
-package server
+package pop
 
 import (
 	"io"
 	"log"
-	"net"
 )
 
-func processPOP(conn net.Conn, config *Config) {
-	s := newPopSession(conn, config)
+func Process(s Session) {
 	s.OK("Hello")
-
 	for {
 		cmd, err := s.ReadCommand()
 		if err == io.EOF {
@@ -21,7 +18,7 @@ func processPOP(conn net.Conn, config *Config) {
 		}
 
 		if cmd.Name == "QUIT" {
-			err = s.end()
+			err = s.Close()
 			if err != nil {
 				log.Println(err)
 				s.Err(err.Error())

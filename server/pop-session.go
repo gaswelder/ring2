@@ -65,6 +65,6 @@ func (s *popState) Open(password string) error {
 	return nil
 }
 
-func (s *popState) end() error {
+func (s *popState) Close() error {
 	return s.inbox.Commit()
 }

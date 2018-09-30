@@ -1,13 +1,11 @@
-package server
+package pop
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/gaswelder/ring2/server/pop"
 )
 
-type popfunc func(s Session, c *pop.Command)
+type popfunc func(s Session, c *Command)
 
 var popFuncs = make(map[string]popfunc)
 
@@ -16,17 +14,18 @@ func popCmd(name string, f popfunc) {
 }
 
 type Session = interface {
-	ReadCommand() (*pop.Command, error)
+	ReadCommand() (*Command, error)
 	Err(string)
 	OK(fmt string, args ...interface{})
 	Send(fmt string, args ...interface{}) error
 	SendData(string) error
 	SetUserName(string) error
 	Open(password string) error
-	Inbox() *pop.InboxView
+	Inbox() *InboxView
+	Close() error
 }
 
-func execPopCmd(s Session, c *pop.Command) bool {
+func execPopCmd(s Session, c *Command) bool {
 	f, ok := popFuncs[c.Name]
 	if !ok {
 		return false
@@ -39,7 +38,7 @@ func init() {
 	/*
 	 * USER <name>
 	 */
-	popCmd("USER", func(s Session, cmd *pop.Command) {
+	popCmd("USER", func(s Session, cmd *Command) {
 		err := s.SetUserName(cmd.Arg)
 		if err != nil {
 			s.Err(err.Error())
@@ -51,7 +50,7 @@ func init() {
 	/*
 	 * PASS <key>
 	 */
-	popCmd("PASS", func(s Session, c *pop.Command) {
+	popCmd("PASS", func(s Session, c *Command) {
 		err := s.Open(c.Arg)
 		if err != nil {
 			s.Err(err.Error())
@@ -63,7 +62,7 @@ func init() {
 	/*
 	 * STAT
 	 */
-	popCmd("STAT", func(s Session, c *pop.Command) {
+	popCmd("STAT", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -78,7 +77,7 @@ func init() {
 	/*
 	 * LIST [<id>]
 	 */
-	popCmd("LIST", func(s Session, c *pop.Command) {
+	popCmd("LIST", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -110,7 +109,7 @@ func init() {
 	/*
 	 * RETR <id>
 	 */
-	popCmd("RETR", func(s Session, c *pop.Command) {
+	popCmd("RETR", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -134,7 +133,7 @@ func init() {
 	/*
 	 * DELE <id>
 	 */
-	popCmd("DELE", func(s Session, c *pop.Command) {
+	popCmd("DELE", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -149,7 +148,7 @@ func init() {
 	/*
 	 * NOOP
 	 */
-	popCmd("NOOP", func(s Session, c *pop.Command) {
+	popCmd("NOOP", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -159,7 +158,7 @@ func init() {
 	/*
 	 * LAST
 	 */
-	popCmd("LAST", func(s Session, c *pop.Command) {
+	popCmd("LAST", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -169,7 +168,7 @@ func init() {
 	/*
 	 * RSET
 	 */
-	popCmd("RSET", func(s Session, c *pop.Command) {
+	popCmd("RSET", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -184,7 +183,7 @@ func init() {
 	/*
 	 * UIDL[ <msg>]
 	 */
-	popCmd("UIDL", func(s Session, c *pop.Command) {
+	popCmd("UIDL", func(s Session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -208,7 +207,7 @@ func init() {
 	/*
 	 * TOP <msg> <n>
 	 */
-	popCmd("TOP", func(s Session, c *pop.Command) {
+	popCmd("TOP", func(s Session, c *Command) {
 
 		var n int
 		var id string
@@ -259,7 +258,7 @@ func init() {
 		s.Send(".")
 	})
 
-	popCmd("RPOP", func(s Session, c *pop.Command) {
+	popCmd("RPOP", func(s Session, c *Command) {
 		s.Err("How such a command got into the RFC at all?")
 	})
 }
