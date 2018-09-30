@@ -129,3 +129,13 @@ func (s *popState) markAsDeleted(msgid string) error {
 	msg.deleted = true
 	return nil
 }
+
+func (s *popState) commit() error {
+	if s.box == nil {
+		return nil
+	}
+	s.box.setLast(s.lastID)
+	err := s.box.purge()
+	s.box.unlock()
+	return err
+}

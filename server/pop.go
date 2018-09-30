@@ -24,12 +24,7 @@ func processPOP(conn net.Conn, config *Config) {
 		}
 
 		if cmd.name == "QUIT" {
-			err = nil
-			if s.box != nil {
-				s.box.setLast(s.lastID)
-				err = s.box.purge()
-				s.box.unlock()
-			}
+			err = s.commit()
 			if err != nil {
 				log.Println(err)
 				s.err(err.Error())
