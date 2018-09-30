@@ -2,8 +2,10 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -75,4 +77,55 @@ func (s *popState) sendDataLine(line string) error {
 	line += "\r\n"
 	_, err := s.conn.Write([]byte(line))
 	return err
+}
+
+func (s *popState) messages() []*message {
+	list := make([]*message, 0)
+	for _, msg := range s.box.messages {
+		if msg.deleted {
+			continue
+		}
+		list = append(list, msg)
+	}
+	return list
+}
+
+func (s *popState) undelete() {
+	for _, msg := range s.box.messages {
+		msg.deleted = false
+	}
+}
+
+func (s *popState) findMessage(id int) *message {
+	for _, msg := range s.messages() {
+		if msg.id == id {
+			return msg
+		}
+	}
+	return nil
+}
+
+func (s *popState) getMessage(arg string) (*message, error) {
+	if arg == "" {
+		return nil, errors.New("Missing argument")
+	}
+	id, err := strconv.Atoi(arg)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := s.findMessage(id)
+	if msg != nil {
+		return msg, nil
+	}
+	return nil, errors.New("No such message")
+}
+
+func (s *popState) markAsDeleted(msgid string) error {
+	msg, err := s.getMessage(msgid)
+	if err != nil {
+		return err
+	}
+	msg.deleted = true
+	return nil
 }

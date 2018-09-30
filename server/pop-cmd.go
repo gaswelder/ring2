@@ -1,9 +1,7 @@
 package server
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -96,10 +94,7 @@ func init() {
 		 */
 		if c.arg == "" {
 			s.ok("List follows")
-			for _, msg := range s.box.messages {
-				if msg.deleted {
-					continue
-				}
+			for _, msg := range s.messages() {
 				s.send("%d %d", msg.id, msg.size)
 			}
 			s.send(".")
@@ -109,7 +104,7 @@ func init() {
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		msg, err := getMessage(s, c)
+		msg, err := s.getMessage(c.arg)
 		if err != nil {
 			s.err(err.Error())
 			return
@@ -126,7 +121,7 @@ func init() {
 			return
 		}
 
-		msg, err := getMessage(s, c)
+		msg, err := s.getMessage(c.arg)
 		if err != nil {
 			s.err(err.Error())
 			return
@@ -155,16 +150,12 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-
-		msg, err := getMessage(s, c)
+		err := s.markAsDeleted(c.arg)
 		if err != nil {
 			s.err(err.Error())
 			return
 		}
-
-		// Mark the message to delete
-		msg.deleted = true
-		s.ok("message %d deleted", msg.id)
+		s.ok("message %d deleted", c.arg)
 	})
 
 	/*
@@ -194,15 +185,8 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		/*
-		 * Unmark deleted messages
-		 */
-		for _, msg := range s.box.messages {
-			msg.deleted = false
-		}
-		/*
-		 * Reset last id
-		 */
+		// Unmark deleted messages and reset last ID
+		s.undelete()
 		s.lastID = s.box.lastID
 		s.ok("")
 	})
@@ -220,16 +204,14 @@ func init() {
 		}
 		if c.arg == "" {
 			s.ok("")
-			for _, msg := range s.box.messages {
-				if !msg.deleted {
-					s.send("%d %s", msg.id, msg.filename)
-				}
+			for _, msg := range s.messages() {
+				s.send("%d %s", msg.id, msg.filename)
 			}
 			s.send(".")
 			return
 		}
 
-		msg, err := getMessage(s, c)
+		msg, err := s.getMessage(c.arg)
 		if err != nil {
 			s.err(err.Error())
 			return
@@ -249,7 +231,7 @@ func init() {
 			return
 		}
 
-		msg := findMessage(s, id)
+		msg := s.findMessage(id)
 		if msg == nil {
 			s.err("No such message")
 			return
@@ -315,30 +297,4 @@ func checkAuth(s *popState) bool {
 		return false
 	}
 	return true
-}
-
-func getMessage(s *popState, c *command) (*message, error) {
-	if c.arg == "" {
-		return nil, errors.New("Missing argument")
-	}
-
-	id, err := strconv.Atoi(c.arg)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := findMessage(s, id)
-	if msg != nil {
-		return msg, nil
-	}
-	return nil, errors.New("No such message")
-}
-
-func findMessage(s *popState, id int) *message {
-	for _, msg := range s.box.messages {
-		if msg.id == id {
-			return msg
-		}
-	}
-	return nil
 }
