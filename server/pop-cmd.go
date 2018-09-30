@@ -78,7 +78,12 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		s.ok("%d %d", s.box.count(), s.box.size())
+		count, size, err := s.stat()
+		if err != nil {
+			s.err(err.Error())
+			return
+		}
+		s.ok("%d %d", count, size)
 	})
 
 	/*

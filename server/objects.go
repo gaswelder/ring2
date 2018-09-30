@@ -50,7 +50,6 @@ func newDraft(from *path) *mail {
 type message struct {
 	id       int
 	size     int64
-	deleted  bool
 	path     string
 	filename string
 }

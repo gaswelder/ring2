@@ -110,28 +110,6 @@ func (b *mailbox) parseMessages() error {
 	return nil
 }
 
-// Returns number of undeleted messages
-func (b *mailbox) count() int {
-	n := 0
-	for _, m := range b.messages {
-		if !m.deleted {
-			n++
-		}
-	}
-	return n
-}
-
-// Returns total size of undeleted messages
-func (b *mailbox) size() int64 {
-	var size int64
-	for _, m := range b.messages {
-		if !m.deleted {
-			size += m.size
-		}
-	}
-	return size
-}
-
 // Returns contents of a file in the directory
 func (b *mailbox) readFile(name string) (string, error) {
 	path := b.path + "/" + name
@@ -186,25 +164,6 @@ func (b *mailbox) setLast(id int) {
 			break
 		}
 	}
-}
-
-// Remove messages marked to be deleted
-func (b *mailbox) purge() error {
-	l := make([]*message, 0)
-
-	for _, msg := range b.messages {
-		if !msg.deleted {
-			l = append(l, msg)
-			continue
-		}
-		err := os.Remove(b.path + "/" + msg.filename)
-		if err != nil {
-			return err
-		}
-	}
-
-	b.messages = l
-	return nil
 }
 
 func createDir(path string) error {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -13,13 +14,14 @@ import (
  * User POP session
  */
 type popState struct {
-	userName string
-	user     *UserRec
-	box      *mailbox
-	lastID   int
-	conn     net.Conn
-	r        *bufio.Reader
-	config   *Config
+	userName            string
+	user                *UserRec
+	box                 *mailbox
+	lastID              int
+	conn                net.Conn
+	r                   *bufio.Reader
+	config              *Config
+	deletedMessageNames []string
 }
 
 func newPopSession(c net.Conn, config *Config) *popState {
@@ -27,6 +29,7 @@ func newPopSession(c net.Conn, config *Config) *popState {
 	s.conn = c
 	s.r = bufio.NewReader(c)
 	s.config = config
+	s.deletedMessageNames = make([]string, 0)
 	return s
 }
 
@@ -79,10 +82,19 @@ func (s *popState) sendDataLine(line string) error {
 	return err
 }
 
+func (s *popState) deleted(msg *message) bool {
+	for _, fn := range s.deletedMessageNames {
+		if fn == msg.filename {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *popState) messages() []*message {
 	list := make([]*message, 0)
 	for _, msg := range s.box.messages {
-		if msg.deleted {
+		if s.deleted(msg) {
 			continue
 		}
 		list = append(list, msg)
@@ -91,9 +103,7 @@ func (s *popState) messages() []*message {
 }
 
 func (s *popState) undelete() {
-	for _, msg := range s.box.messages {
-		msg.deleted = false
-	}
+	s.deletedMessageNames = make([]string, 0)
 }
 
 func (s *popState) findMessage(id int) *message {
@@ -126,7 +136,7 @@ func (s *popState) markAsDeleted(msgid string) error {
 	if err != nil {
 		return err
 	}
-	msg.deleted = true
+	s.deletedMessageNames = append(s.deletedMessageNames, msg.filename)
 	return nil
 }
 
@@ -135,7 +145,34 @@ func (s *popState) commit() error {
 		return nil
 	}
 	s.box.setLast(s.lastID)
-	err := s.box.purge()
+	err := s.purge()
 	s.box.unlock()
 	return err
+}
+
+func (s *popState) stat() (count int, size int64, err error) {
+	for _, msg := range s.messages() {
+		count++
+		size += msg.size
+	}
+	return count, size, err
+}
+
+// Remove messages marked to be deleted
+func (s *popState) purge() error {
+	l := make([]*message, 0)
+
+	for _, msg := range s.box.messages {
+		if !s.deleted(msg) {
+			l = append(l, msg)
+			continue
+		}
+		err := os.Remove(s.box.path + "/" + msg.filename)
+		if err != nil {
+			return err
+		}
+	}
+
+	s.box.messages = l
+	return nil
 }
