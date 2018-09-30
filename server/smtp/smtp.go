@@ -11,13 +11,31 @@ const BadSequenceOfCommands = 503
 const ParameterNotImplemented = 504
 const AuthInvalid = 535
 
+type Writer struct {
+	conn net.Conn
+}
+
+func NewWriter(conn net.Conn) *Writer {
+	return &Writer{conn}
+}
+
+func (w *Writer) Send(code int, format string, args ...interface{}) {
+	line := fmt.Sprintf(format, args...)
+	// debMsg("> %d %s", code, line)
+	fmt.Fprintf(w.conn, "%d %s\r\n", code, line)
+}
+
+func (w *Writer) BeginBatch(code int) *BatchWriter {
+	return newBatchWriter(code, w.conn)
+}
+
 type BatchWriter struct {
 	code     int
 	lastLine string
 	conn     net.Conn
 }
 
-func NewWriter(code int, conn net.Conn) *BatchWriter {
+func newBatchWriter(code int, conn net.Conn) *BatchWriter {
 	w := new(BatchWriter)
 	w.code = code
 	w.conn = conn

@@ -2,7 +2,6 @@ package server
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"net"
 
@@ -51,30 +50,12 @@ func processSMTP(conn net.Conn, server *Server) {
 	log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 }
 
-type Writer struct {
-	conn net.Conn
-}
-
-func NewWriter(conn net.Conn) *Writer {
-	return &Writer{conn}
-}
-
-func (w *Writer) Send(code int, format string, args ...interface{}) {
-	line := fmt.Sprintf(format, args...)
-	debMsg("> %d %s", code, line)
-	fmt.Fprintf(w.conn, "%d %s\r\n", code, line)
-}
-
-func (w *Writer) BeginBatch(code int) *smtp.BatchWriter {
-	return smtp.NewWriter(code, w.conn)
-}
-
 /*
  * A user session, or context.
  */
 type session struct {
 	senderHost string
-	Writer
+	*smtp.Writer
 	r      *bufio.Reader
 	draft  *mail
 	user   *UserRec
@@ -83,8 +64,8 @@ type session struct {
 
 func newSession(conn net.Conn, server *Server) *session {
 	s := new(session)
-	s.Writer = *NewWriter(conn)
-	s.r = bufio.NewReader(s.conn)
+	s.Writer = smtp.NewWriter(conn)
+	s.r = bufio.NewReader(conn)
 	s.server = server
 	return s
 }
