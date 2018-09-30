@@ -148,7 +148,7 @@ func init() {
 		_, ok1 := s.server.config.Lists[path.Addr.Name]
 		_, ok2 := s.server.config.Users[path.Addr.Name]
 		if !ok1 && !ok2 {
-			s.Send(550, "Unknown Recipient")
+			s.Send(550, "Unknown Recipient: "+path.Addr.Format())
 			return
 		}
 		s.Send(250, "OK")

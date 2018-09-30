@@ -60,7 +60,7 @@ func ParsePath(r *scanner.Scanner) (*Path, error) {
 		}
 	}
 
-	user := readName(r) + "@"
+	user := readName(r)
 	r.Expect('@')
 	host := readName(r)
 	r.Expect('>')
