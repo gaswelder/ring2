@@ -321,7 +321,12 @@ func dispatchMail(text string, name string, rpath *smtp.Path, config *Config) er
 	 */
 	user, ok := config.Users[name]
 	if ok {
-		return storeMessage(text, rpath, user, config)
+		box, err := config.mailbox(user)
+		if err != nil {
+			return err
+		}
+		line := fmt.Sprintf("Return-Path: %s\r\n", rpath.Format())
+		return box.Add(line + text)
 	}
 
 	/*
@@ -346,17 +351,4 @@ func dispatchMail(text string, name string, rpath *smtp.Path, config *Config) er
 	 * What then?
 	 */
 	return fmt.Errorf("Unhandled recipient: %s", name)
-}
-
-/*
- * Store a message locally
- */
-func storeMessage(text string, rpath *smtp.Path, u *UserRec, config *Config) error {
-	box, err := config.mailbox(u)
-	if err != nil {
-		return err
-	}
-	line := fmt.Sprintf("Return-Path: %s\r\n", rpath.Format())
-	err = box.Add(line + text)
-	return err
 }
