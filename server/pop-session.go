@@ -24,12 +24,30 @@ func newPopSession(c net.Conn, config *Config) *popState {
 	return s
 }
 
-func (s *popState) open(username, password string) error {
+func (s *popState) SetUserName(name string) error {
+	if s.inbox != nil {
+		return errors.New("already authorized")
+	}
+	if name == "" {
+		return errors.New("empty username")
+	}
+	s.userName = name
+	return nil
+}
+
+func (s *popState) Inbox() *pop.InboxView {
+	return s.inbox
+}
+
+func (s *popState) Open(password string) error {
 	if s.inbox != nil {
 		return errors.New("Session already started")
 	}
+	if s.userName == "" {
+		return errors.New("Wrong commands order")
+	}
 
-	user := s.config.findUser(username, password)
+	user := s.config.findUser(s.userName, password)
 	if user == nil {
 		return errors.New("auth failed")
 	}
