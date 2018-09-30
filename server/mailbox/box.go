@@ -109,64 +109,6 @@ func (b *Mailbox) Add(text string) error {
 	return b.writeFile(name, text)
 }
 
-// Scan the directory and define b.messages and b.lastID fields.
-// func (b *Mailbox) parseMessages() error {
-// 	/*
-// 	 * Make sure the directory exists
-// 	 */
-// 	err := createDir(b.path)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	lastName, err := b.readFile("last")
-// 	if os.IsNotExist(err) {
-// 		lastName = ""
-// 		err = nil
-// 	}
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	/*
-// 	 * Read and sort all directory entries
-// 	 */
-// 	d, err := os.Open(b.path)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	files, err := d.Readdir(0)
-// 	d.Close()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	sort.Sort(kludge(files))
-
-// 	/*
-// 	 * Scan the directory and fill the messages array
-// 	 */
-// 	b.messages = make([]*Message, 0)
-// 	id := 0
-// 	for _, info := range files {
-// 		if info.Name()[0] == '.' {
-// 			continue
-// 		}
-
-// 		if info.Name() == "last" {
-// 			continue
-// 		}
-
-// 		m := new(Message)
-// 		m.size = info.Size()
-// 		m.filename = info.Name()
-// 		m.path = b.path + "/" + m.filename
-// 		b.messages = append(b.messages, m)
-// 	}
-
-// 	return nil
-// }
-
 // Returns contents of a file in the directory
 func (b *Mailbox) readFile(name string) (string, error) {
 	path := b.path + "/" + name
