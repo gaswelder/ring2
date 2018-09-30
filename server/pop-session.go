@@ -4,24 +4,34 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 )
 
+// popMessageEntry represents a message entry used
+// in a POP session. It contains a cached message entry
+// from the mailbox plus session-related data like ID
+// and the `deleted` flag.
+type popMessageEntry struct {
+	id      int
+	msg     *message
+	deleted bool
+}
+
 /*
  * User POP session
  */
 type popState struct {
-	userName            string
-	user                *UserRec
-	box                 *mailbox
-	lastID              int
-	conn                net.Conn
-	r                   *bufio.Reader
-	config              *Config
-	deletedMessageNames []string
+	userName    string
+	box         *mailbox
+	lastID      int
+	conn        net.Conn
+	r           *bufio.Reader
+	config      *Config
+	messageList []*popMessageEntry
 }
 
 func newPopSession(c net.Conn, config *Config) *popState {
@@ -29,7 +39,6 @@ func newPopSession(c net.Conn, config *Config) *popState {
 	s.conn = c
 	s.r = bufio.NewReader(c)
 	s.config = config
-	s.deletedMessageNames = make([]string, 0)
 	return s
 }
 
@@ -54,6 +63,7 @@ func (s *popState) err(comment string) {
 // Send a line
 func (s *popState) send(format string, args ...interface{}) error {
 	line := fmt.Sprintf(format+"\r\n", args...)
+	debMsg("pop send: %s", line)
 	_, err := s.conn.Write([]byte(line))
 	return err
 }
@@ -82,19 +92,10 @@ func (s *popState) sendDataLine(line string) error {
 	return err
 }
 
-func (s *popState) deleted(msg *message) bool {
-	for _, fn := range s.deletedMessageNames {
-		if fn == msg.filename {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *popState) messages() []*message {
-	list := make([]*message, 0)
-	for _, msg := range s.box.messages {
-		if s.deleted(msg) {
+func (s *popState) entries() []*popMessageEntry {
+	list := make([]*popMessageEntry, 0)
+	for _, msg := range s.messageList {
+		if msg.deleted {
 			continue
 		}
 		list = append(list, msg)
@@ -102,17 +103,39 @@ func (s *popState) messages() []*message {
 	return list
 }
 
-func (s *popState) undelete() {
-	s.deletedMessageNames = make([]string, 0)
-}
-
-func (s *popState) findMessage(id int) *message {
-	for _, msg := range s.messages() {
-		if msg.id == id {
-			return msg
+func (s *popState) actualLastRetrievedEntry() (*popMessageEntry, error) {
+	last, err := s.box.lastRetrievedMessage()
+	if err != nil {
+		return nil, err
+	}
+	if last == nil {
+		return nil, nil
+	}
+	for _, entry := range s.messageList {
+		if entry.msg.filename == last.filename {
+			return entry, nil
 		}
 	}
+	return nil, nil
+}
+
+func (s *popState) reset() error {
+	// Reset all deleted flags
+	for _, entry := range s.messageList {
+		entry.deleted = false
+	}
+	last, err := s.actualLastRetrievedEntry()
+	if err != nil {
+		return err
+	}
+	s.lastID = last.id
 	return nil
+}
+
+func (s *popState) markRetrieved(entry *popMessageEntry) {
+	if entry.id > s.lastID {
+		s.lastID = entry.id
+	}
 }
 
 func (s *popState) getMessage(arg string) (*message, error) {
@@ -124,37 +147,67 @@ func (s *popState) getMessage(arg string) (*message, error) {
 		return nil, err
 	}
 
-	msg := s.findMessage(id)
-	if msg != nil {
-		return msg, nil
+	for _, entry := range s.messageList {
+		if entry.id == id && !entry.deleted {
+			return entry.msg, nil
+		}
 	}
 	return nil, errors.New("No such message")
 }
 
-func (s *popState) markAsDeleted(msgid string) error {
-	msg, err := s.getMessage(msgid)
-	if err != nil {
-		return err
+func (s *popState) findEntryByID(msgid string) *popMessageEntry {
+	if msgid == "" {
+		return nil
 	}
-	s.deletedMessageNames = append(s.deletedMessageNames, msg.filename)
+	id, err := strconv.Atoi(msgid)
+	if err != nil {
+		return nil
+	}
+	for _, entry := range s.messageList {
+		if entry.id == id {
+			return entry
+		}
+	}
 	return nil
 }
 
-func (s *popState) begin() error {
-	box, err := newBox(s.user, s.config)
+func (s *popState) markAsDeleted(msgid string) error {
+	e := s.findEntryByID(msgid)
+	if e == nil {
+		return errors.New("no such message")
+	}
+	e.deleted = true
+	return nil
+}
+
+func (s *popState) begin(user *UserRec) error {
+	box, err := newBox(user, s.config)
 	if err != nil {
 		return err
 	}
-	err = box.lock()
+
+	id := 0
+	ls, err := box.list()
 	if err != nil {
 		return err
 	}
-	err = box.parseMessages()
-	if err != nil {
-		return err
+	for _, msg := range ls {
+		id++
+		log.Println(id, msg)
+		s.messageList = append(s.messageList, &popMessageEntry{
+			id:      id,
+			msg:     msg,
+			deleted: false,
+		})
 	}
 	s.box = box
-	s.lastID = box.lastID
+	last, err := s.actualLastRetrievedEntry()
+	if err != nil {
+		return err
+	}
+	if last != nil {
+		s.lastID = last.id
+	}
 	return nil
 }
 
@@ -162,35 +215,46 @@ func (s *popState) commit() error {
 	if s.box == nil {
 		return nil
 	}
-	s.box.setLast(s.lastID)
+	last := s.lastRetrievedEntry()
+	if last != nil {
+		s.box.setLast(last.msg)
+	}
 	err := s.purge()
 	s.box.unlock()
 	return err
 }
 
+func (s *popState) lastRetrievedEntry() *popMessageEntry {
+	for _, entry := range s.entries() {
+		if entry.id == s.lastID {
+			return entry
+		}
+	}
+	return nil
+}
+
 func (s *popState) stat() (count int, size int64, err error) {
-	for _, msg := range s.messages() {
+	for _, msg := range s.entries() {
 		count++
-		size += msg.size
+		size += msg.msg.size
 	}
 	return count, size, err
 }
 
 // Remove messages marked to be deleted
 func (s *popState) purge() error {
-	l := make([]*message, 0)
+	l := make([]*popMessageEntry, 0)
 
-	for _, msg := range s.box.messages {
-		if !s.deleted(msg) {
-			l = append(l, msg)
+	for _, entry := range s.messageList {
+		if !entry.deleted {
+			l = append(l, entry)
 			continue
 		}
-		err := os.Remove(s.box.path + "/" + msg.filename)
+		err := os.Remove(s.box.path + "/" + entry.msg.filename)
 		if err != nil {
 			return err
 		}
 	}
-
-	s.box.messages = l
+	s.messageList = l
 	return nil
 }

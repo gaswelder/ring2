@@ -27,7 +27,7 @@ func init() {
 	 * USER <name>
 	 */
 	popCmd("USER", func(s *popState, cmd *command) {
-		if s.user != nil {
+		if s.box != nil {
 			s.err("Wrong commands order")
 			return
 		}
@@ -43,7 +43,7 @@ func init() {
 	 * PASS <key>
 	 */
 	popCmd("PASS", func(s *popState, c *command) {
-		if s.user != nil || s.userName == "" {
+		if s.box != nil || s.userName == "" {
 			s.err("Wrong commands order")
 			return
 		}
@@ -53,13 +53,12 @@ func init() {
 			s.userName = ""
 			return
 		}
-		s.user = user
 
 		/*
 		 * Lock and parse the user's box. If failed, reset back
 		 * to authentication phase.
 		 */
-		err := s.begin()
+		err := s.begin(user)
 		if err != nil {
 			s.err(err.Error())
 			return
@@ -95,8 +94,8 @@ func init() {
 		 */
 		if c.arg == "" {
 			s.ok("List follows")
-			for _, msg := range s.messages() {
-				s.send("%d %d", msg.id, msg.size)
+			for _, entry := range s.entries() {
+				s.send("%d %d", entry.id, entry.msg.size)
 			}
 			s.send(".")
 			return
@@ -105,13 +104,13 @@ func init() {
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		msg, err := s.getMessage(c.arg)
-		if err != nil {
-			s.err(err.Error())
+		msg := s.findEntryByID(c.arg)
+		if msg == nil {
+			s.err("no such message")
 			return
 		}
 
-		s.ok("%d %d", msg.id, msg.size)
+		s.ok("%d %d", msg.id, msg.msg.size)
 	})
 
 	/*
@@ -122,26 +121,20 @@ func init() {
 			return
 		}
 
-		msg, err := s.getMessage(c.arg)
-		if err != nil {
-			s.err(err.Error())
+		entry := s.findEntryByID(c.arg)
+		if entry == nil {
+			s.err("no such message")
 			return
 		}
 
-		data, err := msg.Content()
+		data, err := entry.msg.Content()
 		if err != nil {
 			s.err(err.Error())
 			return
 		}
-		s.ok("%d octets", msg.size)
+		s.ok("%d octets", entry.msg.size)
 		s.sendData(data)
-
-		/*
-		 * Update the highest id
-		 */
-		if msg.id > s.lastID {
-			s.lastID = msg.id
-		}
+		s.markRetrieved(entry)
 	})
 
 	/*
@@ -186,9 +179,7 @@ func init() {
 		if !checkAuth(s) {
 			return
 		}
-		// Unmark deleted messages and reset last ID
-		s.undelete()
-		s.lastID = s.box.lastID
+		s.reset()
 		s.ok("")
 	})
 
@@ -205,19 +196,19 @@ func init() {
 		}
 		if c.arg == "" {
 			s.ok("")
-			for _, msg := range s.messages() {
-				s.send("%d %s", msg.id, msg.filename)
+			for _, entry := range s.entries() {
+				s.send("%d %s", entry.id, entry.msg.filename)
 			}
 			s.send(".")
 			return
 		}
 
-		msg, err := s.getMessage(c.arg)
-		if err != nil {
-			s.err(err.Error())
+		msg := s.findEntryByID(c.arg)
+		if msg == nil {
+			s.err("no such message")
 			return
 		}
-		s.ok("%d %s", msg.id, msg.filename)
+		s.ok("%d %s", msg.id, msg.msg.filename)
 	})
 
 	/*
@@ -225,20 +216,21 @@ func init() {
 	 */
 	popCmd("TOP", func(s *popState, c *command) {
 
-		var id, n int
-		_, err := fmt.Sscanf(c.arg, "%d %d", &id, &n)
+		var n int
+		var id string
+		_, err := fmt.Sscanf(c.arg, "%s %d", &id, &n)
 		if err != nil {
 			s.err(err.Error())
 			return
 		}
 
-		msg := s.findMessage(id)
-		if msg == nil {
+		entry := s.findEntryByID(id)
+		if entry == nil {
 			s.err("No such message")
 			return
 		}
 
-		text, err := msg.Content()
+		text, err := entry.msg.Content()
 		if err != nil {
 			s.err(err.Error())
 			return
@@ -279,7 +271,7 @@ func init() {
 }
 
 func checkAuth(s *popState) bool {
-	if s.user == nil {
+	if s.box == nil {
 		s.err("Unauthorized")
 		return false
 	}

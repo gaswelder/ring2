@@ -22,9 +22,7 @@ import (
  */
 
 type mailbox struct {
-	messages []*message
-	lastID   int
-	path     string
+	path string
 }
 
 func newBox(u *UserRec, config *Config) (*mailbox, error) {
@@ -46,24 +44,13 @@ func (a kludge) Less(i, j int) bool {
 	return strings.Compare(a[i].Name(), a[j].Name()) == -1
 }
 
-// Scan the directory and define b.messages and b.lastID fields.
-func (b *mailbox) parseMessages() error {
+func (b *mailbox) list() ([]*message, error) {
 	/*
 	 * Make sure the directory exists
 	 */
 	err := createDir(b.path)
 	if err != nil {
-		return err
-	}
-
-	lastName, err := b.readFile("last")
-	if os.IsNotExist(err) {
-		lastName = ""
-		err = nil
-	}
-
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	/*
@@ -71,44 +58,113 @@ func (b *mailbox) parseMessages() error {
 	 */
 	d, err := os.Open(b.path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	files, err := d.Readdir(0)
 	d.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sort.Sort(kludge(files))
 
 	/*
 	 * Scan the directory and fill the messages array
 	 */
-	b.messages = make([]*message, 0)
-	id := 0
+	messages := make([]*message, 0)
 	for _, info := range files {
 		if info.Name()[0] == '.' {
 			continue
 		}
-
 		if info.Name() == "last" {
 			continue
 		}
 
-		id++
 		m := new(message)
 		m.size = info.Size()
-		m.id = id
 		m.filename = info.Name()
 		m.path = b.path + "/" + m.filename
-		b.messages = append(b.messages, m)
+		messages = append(messages, m)
+	}
+	return messages, nil
+}
 
-		if lastName == info.Name() {
-			b.lastID = id
-		}
+func (b *mailbox) lastRetrievedMessage() (*message, error) {
+	lastName, err := b.readFile("last")
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	stat, err := os.Stat(b.path + "/" + lastName)
+	if err != nil {
+		return nil, err
+	}
+	m := new(message)
+	m.size = stat.Size()
+	m.filename = lastName
+	m.path = b.path + "/" + lastName
+	return m, nil
 }
+
+// Scan the directory and define b.messages and b.lastID fields.
+// func (b *mailbox) parseMessages() error {
+// 	/*
+// 	 * Make sure the directory exists
+// 	 */
+// 	err := createDir(b.path)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	lastName, err := b.readFile("last")
+// 	if os.IsNotExist(err) {
+// 		lastName = ""
+// 		err = nil
+// 	}
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	/*
+// 	 * Read and sort all directory entries
+// 	 */
+// 	d, err := os.Open(b.path)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	files, err := d.Readdir(0)
+// 	d.Close()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	sort.Sort(kludge(files))
+
+// 	/*
+// 	 * Scan the directory and fill the messages array
+// 	 */
+// 	b.messages = make([]*message, 0)
+// 	id := 0
+// 	for _, info := range files {
+// 		if info.Name()[0] == '.' {
+// 			continue
+// 		}
+
+// 		if info.Name() == "last" {
+// 			continue
+// 		}
+
+// 		m := new(message)
+// 		m.size = info.Size()
+// 		m.filename = info.Name()
+// 		m.path = b.path + "/" + m.filename
+// 		b.messages = append(b.messages, m)
+// 	}
+
+// 	return nil
+// }
 
 // Returns contents of a file in the directory
 func (b *mailbox) readFile(name string) (string, error) {
@@ -154,16 +210,8 @@ func (b *mailbox) unlock() error {
 }
 
 // Update the 'last' to point to the message with the given id
-func (b *mailbox) setLast(id int) {
-	if id == b.lastID {
-		return
-	}
-	for _, msg := range b.messages {
-		if msg.id == id {
-			b.writeFile("last", msg.filename)
-			break
-		}
-	}
+func (b *mailbox) setLast(msg *message) {
+	b.writeFile("last", msg.filename)
 }
 
 func createDir(path string) error {

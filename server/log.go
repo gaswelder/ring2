@@ -3,7 +3,7 @@ package server
 import "fmt"
 import "os"
 
-var debugLog = false
+var debugLog = true
 
 func debMsg(tpl string, args ...interface{}) {
 	if !debugLog {

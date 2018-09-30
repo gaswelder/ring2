@@ -48,7 +48,6 @@ func newDraft(from *path) *mail {
 }
 
 type message struct {
-	id       int
 	size     int64
 	path     string
 	filename string
