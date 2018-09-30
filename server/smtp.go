@@ -13,9 +13,9 @@ const smtpBadSequenceOfCommands = 503
 const smtpParameterNotImplemented = 504
 const smtpAuthInvalid = 535
 
-func processSMTP(conn net.Conn, config *Config) {
-	s := newSession(conn, config)
-	s.send(220, "%s ready", config.Hostname)
+func processSMTP(conn net.Conn, server *Server) {
+	s := newSession(conn, server)
+	s.send(220, "%s ready", server.config.Hostname)
 
 	/*
 	 * Go allows to organize the processing in a linear manner, but the
@@ -64,14 +64,14 @@ type session struct {
 	r          *bufio.Reader
 	draft      *mail
 	user       *UserRec
-	config     *Config
+	server     *Server
 }
 
-func newSession(conn net.Conn, config *Config) *session {
+func newSession(conn net.Conn, server *Server) *session {
 	s := new(session)
 	s.conn = conn
 	s.r = bufio.NewReader(s.conn)
-	s.config = config
+	s.server = server
 	return s
 }
 

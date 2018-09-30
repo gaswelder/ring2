@@ -31,15 +31,15 @@ type popState struct {
 	lastID      int
 	conn        net.Conn
 	r           *bufio.Reader
-	config      *Config
+	server      *Server
 	messageList []*popMessageEntry
 }
 
-func newPopSession(c net.Conn, config *Config) *popState {
+func newPopSession(c net.Conn, server *Server) *popState {
 	s := new(popState)
 	s.conn = c
 	s.r = bufio.NewReader(c)
-	s.config = config
+	s.server = server
 	return s
 }
 
@@ -182,7 +182,7 @@ func (s *popState) markAsDeleted(msgid string) error {
 }
 
 func (s *popState) begin(user *UserRec) error {
-	box, err := user.mailbox(s.config)
+	box, err := user.mailbox(s.server.config)
 	if err != nil {
 		return err
 	}

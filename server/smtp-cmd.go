@@ -137,7 +137,7 @@ func init() {
 			s.send(501, "Malformed forward-path")
 			return
 		}
-		code, str := checkPath(path, s.config)
+		code, str := checkPath(path, s.server.config)
 		s.send(code, str)
 		if code >= 300 || code < 200 {
 			return
@@ -167,7 +167,7 @@ func init() {
 		 * Example: Received: from GHI.ARPA by JKL.ARPA ; 27 Oct 81 15:27:39 PST
 		 */
 		text := fmt.Sprintf("Received: from %s by %s ; %s\r\n",
-			s.senderHost, s.config.Hostname, formatDate())
+			s.senderHost, s.server.config.Hostname, formatDate())
 
 		/*
 		 * Read the message
@@ -194,7 +194,7 @@ func init() {
 			text += line
 		}
 
-		if processMessage(s.draft, text, s.config) {
+		if processMessage(s.draft, text, s.server.config) {
 			s.send(250, "OK")
 		} else {
 			s.send(554, "Transaction failed")
@@ -224,7 +224,7 @@ func init() {
 			return
 		}
 
-		user, smtpErr := plainAuth(parts[1], s.config)
+		user, smtpErr := plainAuth(parts[1], s.server)
 		if smtpErr != nil {
 			s.send(smtpErr.code, smtpErr.message)
 			return
@@ -245,7 +245,7 @@ type smtpError struct {
 	message string
 }
 
-func plainAuth(arg string, config *Config) (*UserRec, *smtpError) {
+func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
 	// AGdhcwAxMjM= -> \0user\0pass
 	data, err := base64.StdEncoding.DecodeString(arg)
 	if err != nil {
@@ -259,8 +259,7 @@ func plainAuth(arg string, config *Config) (*UserRec, *smtpError) {
 
 	login := parts[1]
 	pass := parts[2]
-
-	return findUser(login, pass, config), nil
+	return server.findUser(login, pass), nil
 }
 
 /*

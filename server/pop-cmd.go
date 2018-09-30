@@ -47,7 +47,7 @@ func init() {
 			s.err("Wrong commands order")
 			return
 		}
-		user := findUser(s.userName, c.arg, s.config)
+		user := s.server.findUser(s.userName, c.arg)
 		if user == nil {
 			s.err("Auth failed")
 			s.userName = ""
