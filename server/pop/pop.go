@@ -5,6 +5,18 @@ import (
 	"log"
 )
 
+type Session = interface {
+	ReadCommand() (*Command, error)
+	Err(string)
+	OK(fmt string, args ...interface{})
+	Send(fmt string, args ...interface{}) error
+	SendData(string) error
+	SetUserName(string) error
+	Open(password string) error
+	Inbox() *InboxView
+	Close() error
+}
+
 func Process(s Session) {
 	s.OK("Hello")
 	for {
@@ -28,8 +40,11 @@ func Process(s Session) {
 			break
 		}
 
-		if !execPopCmd(s, cmd) {
+		cmdfunc, ok := popFuncs[cmd.Name]
+		if !ok {
 			s.Err("Unknown command")
+			continue
 		}
+		cmdfunc(s, cmd)
 	}
 }

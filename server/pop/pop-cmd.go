@@ -13,27 +13,6 @@ func popCmd(name string, f popfunc) {
 	popFuncs[name] = f
 }
 
-type Session = interface {
-	ReadCommand() (*Command, error)
-	Err(string)
-	OK(fmt string, args ...interface{})
-	Send(fmt string, args ...interface{}) error
-	SendData(string) error
-	SetUserName(string) error
-	Open(password string) error
-	Inbox() *InboxView
-	Close() error
-}
-
-func execPopCmd(s Session, c *Command) bool {
-	f, ok := popFuncs[c.Name]
-	if !ok {
-		return false
-	}
-	f(s, c)
-	return true
-}
-
 func init() {
 	/*
 	 * USER <name>
