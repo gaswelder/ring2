@@ -144,19 +144,13 @@ func init() {
 			return
 		}
 
-		name, host, err := splitAddress(path.Address)
-		if err != nil {
-			s.Send(501, err.Error())
-			return
-		}
-
-		if !strings.EqualFold(host, s.server.config.Hostname) {
+		if !strings.EqualFold(path.Addr.Host, s.server.config.Hostname) {
 			s.Send(550, "Not a local address")
 			return
 		}
 
-		_, ok1 := s.server.config.Lists[name]
-		_, ok2 := s.server.config.Users[name]
+		_, ok1 := s.server.config.Lists[path.Addr.Name]
+		_, ok2 := s.server.config.Users[path.Addr.Name]
 		if !ok1 && !ok2 {
 			s.Send(550, "Unknown Recipient")
 			return
@@ -289,16 +283,6 @@ func obsolete(s *session, cmd *smtp.Command) {
 	s.Send(502, "Obsolete command")
 }
 
-func splitAddress(addr string) (name string, host string, err error) {
-	pos := strings.Index(addr, "@")
-	if pos < 0 {
-		err = errors.New("Invalid email address")
-	}
-	name = addr[:pos]
-	host = addr[pos+1:]
-	return
-}
-
 func processMessage(m *smtp.Mail, text string, config *Config) bool {
 
 	ok := 0
@@ -306,11 +290,8 @@ func processMessage(m *smtp.Mail, text string, config *Config) bool {
 	var err error
 
 	for _, fpath := range m.Recipients {
-		var name string
-		name, _, err = splitAddress(fpath.Address)
-		if err == nil {
-			err = dispatchMail(text, name, rpath, config)
-		}
+		err = dispatchMail(text, fpath.Addr.Name, rpath, config)
+
 		/*
 		 * If processing failed, send failure notification
 		 * using the reverse-path.
@@ -387,10 +368,10 @@ func sendBounce(fpath, rpath *smtp.Path, config *Config) error {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Date: %s\r\n", formatDate())
 	fmt.Fprintf(&b, "From: ring2@%s\r\n", config.Hostname)
-	fmt.Fprintf(&b, "To: %s\r\n", rpath.Address)
+	fmt.Fprintf(&b, "To: %s\r\n", rpath.Addr.Format())
 	fmt.Fprintf(&b, "Subject: mail delivery failure\r\n")
 	fmt.Fprintf(&b, "\r\n")
-	fmt.Fprintf(&b, "Sorry, your mail could not be delivered to %s", fpath.Address)
+	fmt.Fprintf(&b, "Sorry, your mail could not be delivered to %s", fpath.Addr.Format())
 	/*
 	 * Specify null as reverse-path to prevent loops
 	 */

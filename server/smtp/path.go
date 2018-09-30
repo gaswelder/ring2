@@ -13,7 +13,7 @@ type Path struct {
 	// zero or more lists of hostnames like foo.com
 	Hosts []string
 	// address endpoint, like bob@example.net
-	Address string
+	Addr *Address
 }
 
 func (p *Path) Format() string {
@@ -27,7 +27,7 @@ func (p *Path) Format() string {
 		}
 		s += ":"
 	}
-	s += p.Address + ">"
+	s += p.Addr.Format() + ">"
 	return s
 }
 
@@ -60,12 +60,12 @@ func ParsePath(r *scanner.Scanner) (*Path, error) {
 		}
 	}
 
-	addr := readName(r) + "@"
+	user := readName(r) + "@"
 	r.Expect('@')
-	addr += readName(r)
+	host := readName(r)
 	r.Expect('>')
 
-	p.Address = addr
+	p.Addr = &Address{user, host}
 	return p, r.Err()
 }
 
