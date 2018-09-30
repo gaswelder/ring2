@@ -1,20 +1,28 @@
-package server
+package pop
 
 import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 )
 
-type popReadWriter struct {
+type ReadWriter struct {
 	writer io.Writer
 	reader *bufio.Reader
 }
 
-func (rw *popReadWriter) readCommand() (*command, error) {
+func NewReadWriter(c net.Conn) *ReadWriter {
+	return &ReadWriter{
+		writer: c,
+		reader: bufio.NewReader(c),
+	}
+}
+
+func (rw *ReadWriter) ReadCommand() (*Command, error) {
 	line, err := rw.reader.ReadString('\n')
-	debMsg(line)
+	// debMsg(line)
 	if err != nil {
 		return nil, err
 	}
@@ -22,47 +30,47 @@ func (rw *popReadWriter) readCommand() (*command, error) {
 }
 
 // Send a success response with optional comment
-func (rw *popReadWriter) ok(comment string, args ...interface{}) {
+func (rw *ReadWriter) OK(comment string, args ...interface{}) {
 	if comment != "" {
-		rw.send("+OK " + fmt.Sprintf(comment, args...))
+		rw.Send("+OK " + fmt.Sprintf(comment, args...))
 	} else {
-		rw.send("+OK")
+		rw.Send("+OK")
 	}
 }
 
 // Send an error response with optinal comment
-func (rw *popReadWriter) err(comment string) {
+func (rw *ReadWriter) Err(comment string) {
 	if comment != "" {
-		rw.send("-ERR " + comment)
+		rw.Send("-ERR " + comment)
 	} else {
-		rw.send("-ERR")
+		rw.Send("-ERR")
 	}
 }
 
 // Send a line
-func (rw *popReadWriter) send(format string, args ...interface{}) error {
+func (rw *ReadWriter) Send(format string, args ...interface{}) error {
 	line := fmt.Sprintf(format+"\r\n", args...)
-	debMsg("pop send: %s", line)
+	// debMsg("pop send: %s", line)
 	_, err := rw.writer.Write([]byte(line))
 	return err
 }
 
 // Send a multiline data
-func (rw *popReadWriter) sendData(data string) error {
+func (rw *ReadWriter) SendData(data string) error {
 	var err error
 	lines := strings.Split(data, "\r\n")
 	for _, line := range lines {
-		err = rw.sendDataLine(line)
+		err = rw.SendDataLine(line)
 		if err != nil {
 			return err
 		}
 	}
-	err = rw.send(".")
+	err = rw.Send(".")
 	return err
 }
 
 // Sends a line of data, taking care of the "dot-stuffing"
-func (rw *popReadWriter) sendDataLine(line string) error {
+func (rw *ReadWriter) SendDataLine(line string) error {
 	if len(line) > 0 && line[0] == '.' {
 		line = "." + line
 	}

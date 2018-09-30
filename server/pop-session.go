@@ -1,13 +1,13 @@
 package server
 
 import (
-	"bufio"
 	"errors"
 	"log"
 	"net"
 	"strconv"
 
 	"github.com/gaswelder/ring2/server/mailbox"
+	"github.com/gaswelder/ring2/server/pop"
 )
 
 // popMessageEntry represents a message entry used
@@ -29,13 +29,12 @@ type popState struct {
 	lastID      int
 	server      *Server
 	messageList []*popMessageEntry
-	popReadWriter
+	*pop.ReadWriter
 }
 
 func newPopSession(c net.Conn, server *Server) *popState {
 	s := new(popState)
-	s.popReadWriter.writer = c
-	s.popReadWriter.reader = bufio.NewReader(c)
+	s.ReadWriter = pop.NewReadWriter(c)
 	s.server = server
 	return s
 }

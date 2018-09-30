@@ -7,28 +7,28 @@ import (
 
 func processPOP(conn net.Conn, server *Server) {
 	s := newPopSession(conn, server)
-	s.ok("Hello")
+	s.OK("Hello")
 
 	for {
-		cmd, err := s.readCommand()
+		cmd, err := s.ReadCommand()
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			continue
 		}
 
-		if cmd.name == "QUIT" {
+		if cmd.Name == "QUIT" {
 			err = s.commit()
 			if err != nil {
 				log.Println(err)
-				s.err(err.Error())
+				s.Err(err.Error())
 			} else {
-				s.ok("")
+				s.OK("")
 			}
 			break
 		}
 
 		if !execPopCmd(s, cmd) {
-			s.err("Unknown command")
+			s.Err("Unknown command")
 		}
 	}
 	conn.Close()

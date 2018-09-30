@@ -1,50 +1,13 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/gaswelder/ring2/scanner"
+	"github.com/gaswelder/ring2/server/pop"
 )
 
-type command struct {
-	name string
-	arg  string
-}
-
-func parseCommand(line string) (*command, error) {
-	var err error
-	var name, arg string
-
-	r := scanner.New(line)
-
-	// Command name: a sequence of ASCII alphabetic characters.
-	for isAlpha(r.Next()) {
-		name += string(toUpper(r.Get()))
-	}
-
-	// If space follows, read the argument
-	if r.Next() == ' ' {
-		r.Get()
-		for r.More() && r.Next() != '\r' {
-			arg += string(r.Get())
-		}
-	}
-
-	// Expect "\r\n"
-	if r.Get() != '\r' || r.Get() != '\n' {
-		err = errors.New("<CRLF> expected")
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &command{name, arg}, nil
-}
-
-type popfunc func(s *popState, c *command)
+type popfunc func(s *popState, c *pop.Command)
 
 var popFuncs = make(map[string]popfunc)
 
@@ -52,8 +15,8 @@ func popCmd(name string, f popfunc) {
 	popFuncs[name] = f
 }
 
-func execPopCmd(s *popState, c *command) bool {
-	f, ok := popFuncs[c.name]
+func execPopCmd(s *popState, c *pop.Command) bool {
+	f, ok := popFuncs[c.Name]
 	if !ok {
 		return false
 	}
@@ -65,30 +28,30 @@ func init() {
 	/*
 	 * USER <name>
 	 */
-	popCmd("USER", func(s *popState, cmd *command) {
+	popCmd("USER", func(s *popState, cmd *pop.Command) {
 		if s.box != nil {
-			s.err("Wrong commands order")
+			s.Err("Wrong commands order")
 			return
 		}
-		if cmd.arg == "" {
-			s.err("username expected")
+		if cmd.Arg == "" {
+			s.Err("username expected")
 			return
 		}
-		s.userName = cmd.arg
-		s.ok("")
+		s.userName = cmd.Arg
+		s.OK("")
 	})
 
 	/*
 	 * PASS <key>
 	 */
-	popCmd("PASS", func(s *popState, c *command) {
+	popCmd("PASS", func(s *popState, c *pop.Command) {
 		if s.box != nil || s.userName == "" {
-			s.err("Wrong commands order")
+			s.Err("Wrong commands order")
 			return
 		}
-		user := s.server.findUser(s.userName, c.arg)
+		user := s.server.findUser(s.userName, c.Arg)
 		if user == nil {
-			s.err("Auth failed")
+			s.Err("Auth failed")
 			s.userName = ""
 			return
 		}
@@ -99,31 +62,31 @@ func init() {
 		 */
 		err := s.begin(user)
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
-		s.ok("")
+		s.OK("")
 	})
 
 	/*
 	 * STAT
 	 */
-	popCmd("STAT", func(s *popState, c *command) {
+	popCmd("STAT", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
 		count, size, err := s.stat()
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
-		s.ok("%d %d", count, size)
+		s.OK("%d %d", count, size)
 	})
 
 	/*
 	 * LIST [<id>]
 	 */
-	popCmd("LIST", func(s *popState, c *command) {
+	popCmd("LIST", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -131,95 +94,95 @@ func init() {
 		/*
 		 * If no argument, show all undeleted messages
 		 */
-		if c.arg == "" {
-			s.ok("List follows")
+		if c.Arg == "" {
+			s.OK("List follows")
 			for _, entry := range s.entries() {
-				s.send("%d %d", entry.id, entry.msg.Size())
+				s.Send("%d %d", entry.id, entry.msg.Size())
 			}
-			s.send(".")
+			s.Send(".")
 			return
 		}
 
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		msg := s.findEntryByID(c.arg)
+		msg := s.findEntryByID(c.Arg)
 		if msg == nil {
-			s.err("no such message")
+			s.Err("no such message")
 			return
 		}
 
-		s.ok("%d %d", msg.id, msg.msg.Size())
+		s.OK("%d %d", msg.id, msg.msg.Size())
 	})
 
 	/*
 	 * RETR <id>
 	 */
-	popCmd("RETR", func(s *popState, c *command) {
+	popCmd("RETR", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
 
-		entry := s.findEntryByID(c.arg)
+		entry := s.findEntryByID(c.Arg)
 		if entry == nil {
-			s.err("no such message")
+			s.Err("no such message")
 			return
 		}
 
 		data, err := entry.msg.Content()
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
-		s.ok("%d octets", entry.msg.Size())
-		s.sendData(data)
+		s.OK("%d octets", entry.msg.Size())
+		s.SendData(data)
 		s.markRetrieved(entry)
 	})
 
 	/*
 	 * DELE <id>
 	 */
-	popCmd("DELE", func(s *popState, c *command) {
+	popCmd("DELE", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
-		err := s.markAsDeleted(c.arg)
+		err := s.markAsDeleted(c.Arg)
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
-		s.ok("message %d deleted", c.arg)
+		s.OK("message %d deleted", c.Arg)
 	})
 
 	/*
 	 * NOOP
 	 */
-	popCmd("NOOP", func(s *popState, c *command) {
+	popCmd("NOOP", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
-		s.ok("")
+		s.OK("")
 	})
 
 	/*
 	 * LAST
 	 */
-	popCmd("LAST", func(s *popState, c *command) {
+	popCmd("LAST", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
-		s.ok("%d", s.lastID)
+		s.OK("%d", s.lastID)
 	})
 
 	/*
 	 * RSET
 	 */
-	popCmd("RSET", func(s *popState, c *command) {
+	popCmd("RSET", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
 		s.reset()
-		s.ok("")
+		s.OK("")
 	})
 
 	/*
@@ -229,49 +192,49 @@ func init() {
 	/*
 	 * UIDL[ <msg>]
 	 */
-	popCmd("UIDL", func(s *popState, c *command) {
+	popCmd("UIDL", func(s *popState, c *pop.Command) {
 		if !checkAuth(s) {
 			return
 		}
-		if c.arg == "" {
-			s.ok("")
+		if c.Arg == "" {
+			s.OK("")
 			for _, entry := range s.entries() {
-				s.send("%d %s", entry.id, entry.msg.Filename())
+				s.Send("%d %s", entry.id, entry.msg.Filename())
 			}
-			s.send(".")
+			s.Send(".")
 			return
 		}
 
-		msg := s.findEntryByID(c.arg)
+		msg := s.findEntryByID(c.Arg)
 		if msg == nil {
-			s.err("no such message")
+			s.Err("no such message")
 			return
 		}
-		s.ok("%d %s", msg.id, msg.msg.Filename())
+		s.OK("%d %s", msg.id, msg.msg.Filename())
 	})
 
 	/*
 	 * TOP <msg> <n>
 	 */
-	popCmd("TOP", func(s *popState, c *command) {
+	popCmd("TOP", func(s *popState, c *pop.Command) {
 
 		var n int
 		var id string
-		_, err := fmt.Sscanf(c.arg, "%s %d", &id, &n)
+		_, err := fmt.Sscanf(c.Arg, "%s %d", &id, &n)
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
 
 		entry := s.findEntryByID(id)
 		if entry == nil {
-			s.err("No such message")
+			s.Err("No such message")
 			return
 		}
 
 		text, err := entry.msg.Content()
 		if err != nil {
-			s.err(err.Error())
+			s.Err(err.Error())
 			return
 		}
 
@@ -282,9 +245,9 @@ func init() {
 		/*
 		 * Send all headers
 		 */
-		s.ok("")
+		s.OK("")
 		for i < size {
-			s.send("%s", lines[i])
+			s.Send("%s", lines[i])
 			if lines[i] == "" {
 				break
 			}
@@ -296,22 +259,22 @@ func init() {
 		 */
 		i++
 		for i < size && n > 0 {
-			s.send("---%d", n)
-			s.send("%s", lines[i])
+			s.Send("---%d", n)
+			s.Send("%s", lines[i])
 			i++
 			n--
 		}
-		s.send(".")
+		s.Send(".")
 	})
 
-	popCmd("RPOP", func(s *popState, c *command) {
-		s.err("How such a command got into the RFC at all?")
+	popCmd("RPOP", func(s *popState, c *pop.Command) {
+		s.Err("How such a command got into the RFC at all?")
 	})
 }
 
 func checkAuth(s *popState) bool {
 	if s.box == nil {
-		s.err("Unauthorized")
+		s.Err("Unauthorized")
 		return false
 	}
 	return true
