@@ -1,10 +1,12 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net"
 	"os"
 
+	"github.com/gaswelder/ring2/server/mailbox"
 	"github.com/gaswelder/ring2/server/pop"
 )
 
@@ -38,6 +40,16 @@ func createDir(path string) error {
 	return os.MkdirAll(path, 0755)
 }
 
+func auth(config *Config) pop.AuthFunc {
+	return func(name, password string) (*mailbox.Mailbox, error) {
+		user := config.findUser(name, password)
+		if user == nil {
+			return nil, errors.New("invalid credentials")
+		}
+		return config.mailbox(user)
+	}
+}
+
 func runPOP(config *Config) error {
 	ln, err := net.Listen("tcp", config.Pop)
 	if err != nil {
@@ -53,8 +65,7 @@ func runPOP(config *Config) error {
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go func() {
-			s := newPopSession(conn, config)
-			pop.Process(s)
+			pop.Process(conn, auth(config))
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()

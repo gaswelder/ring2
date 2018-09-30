@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 )
 
@@ -13,7 +12,7 @@ type ReadWriter struct {
 	reader *bufio.Reader
 }
 
-func NewReadWriter(c net.Conn) *ReadWriter {
+func NewReadWriter(c io.ReadWriter) *ReadWriter {
 	return &ReadWriter{
 		writer: c,
 		reader: bufio.NewReader(c),

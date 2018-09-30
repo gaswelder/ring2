@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type popfunc func(s Session, c *Command)
+type popfunc func(s *session, c *Command)
 
 var popFuncs = make(map[string]popfunc)
 
@@ -17,35 +17,57 @@ func init() {
 	/*
 	 * USER <name>
 	 */
-	popCmd("USER", func(s Session, cmd *Command) {
-		err := s.SetUserName(cmd.Arg)
-		if err != nil {
-			s.Err(err.Error())
+	popCmd("USER", func(s *session, cmd *Command) {
+		if s.inbox != nil {
+			s.Err("already authorized")
 			return
 		}
+		name := cmd.Arg
+		if name == "" {
+			s.Err("empty username")
+			return
+		}
+		s.userName = name
 		s.OK("")
 	})
 
 	/*
 	 * PASS <key>
 	 */
-	popCmd("PASS", func(s Session, c *Command) {
-		err := s.Open(c.Arg)
+	popCmd("PASS", func(s *session, c *Command) {
+		if s.inbox != nil {
+			s.Err("Session already started")
+			return
+		}
+		if s.userName == "" {
+			s.Err("Wrong commands order")
+			return
+		}
+
+		box, err := s.auth(s.userName, c.Arg)
 		if err != nil {
 			s.Err(err.Error())
 			return
 		}
+
+		m, err := NewInboxView(box)
+		if err != nil {
+			s.Err(err.Error())
+			return
+		}
+
+		s.inbox = m
 		s.OK("")
 	})
 
 	/*
 	 * STAT
 	 */
-	popCmd("STAT", func(s Session, c *Command) {
+	popCmd("STAT", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
-		count, size, err := s.Inbox().Stat()
+		count, size, err := s.inbox.Stat()
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -56,7 +78,7 @@ func init() {
 	/*
 	 * LIST [<id>]
 	 */
-	popCmd("LIST", func(s Session, c *Command) {
+	popCmd("LIST", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -66,7 +88,7 @@ func init() {
 		 */
 		if c.Arg == "" {
 			s.OK("List follows")
-			for _, entry := range s.Inbox().Entries() {
+			for _, entry := range s.inbox.Entries() {
 				s.Send("%d %d", entry.Id, entry.Msg.Size())
 			}
 			s.Send(".")
@@ -76,7 +98,7 @@ func init() {
 		/*
 		 * Otherwise treat as LIST <id>
 		 */
-		entry := s.Inbox().FindEntryByID(c.Arg)
+		entry := s.inbox.FindEntryByID(c.Arg)
 		if entry == nil {
 			s.Err("no such message")
 			return
@@ -88,12 +110,12 @@ func init() {
 	/*
 	 * RETR <id>
 	 */
-	popCmd("RETR", func(s Session, c *Command) {
+	popCmd("RETR", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
 
-		entry := s.Inbox().FindEntryByID(c.Arg)
+		entry := s.inbox.FindEntryByID(c.Arg)
 		if entry == nil {
 			s.Err("no such message")
 			return
@@ -106,17 +128,17 @@ func init() {
 		}
 		s.OK("%d octets", entry.Msg.Size())
 		s.SendData(data)
-		s.Inbox().MarkRetrieved(entry)
+		s.inbox.MarkRetrieved(entry)
 	})
 
 	/*
 	 * DELE <id>
 	 */
-	popCmd("DELE", func(s Session, c *Command) {
+	popCmd("DELE", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
-		err := s.Inbox().MarkAsDeleted(c.Arg)
+		err := s.inbox.MarkAsDeleted(c.Arg)
 		if err != nil {
 			s.Err(err.Error())
 			return
@@ -127,7 +149,7 @@ func init() {
 	/*
 	 * NOOP
 	 */
-	popCmd("NOOP", func(s Session, c *Command) {
+	popCmd("NOOP", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
@@ -137,21 +159,21 @@ func init() {
 	/*
 	 * LAST
 	 */
-	popCmd("LAST", func(s Session, c *Command) {
+	popCmd("LAST", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
-		s.OK("%d", s.Inbox().LastID())
+		s.OK("%d", s.inbox.LastID())
 	})
 
 	/*
 	 * RSET
 	 */
-	popCmd("RSET", func(s Session, c *Command) {
+	popCmd("RSET", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
-		s.Inbox().Reset()
+		s.inbox.Reset()
 		s.OK("")
 	})
 
@@ -162,20 +184,20 @@ func init() {
 	/*
 	 * UIDL[ <msg>]
 	 */
-	popCmd("UIDL", func(s Session, c *Command) {
+	popCmd("UIDL", func(s *session, c *Command) {
 		if !checkAuth(s) {
 			return
 		}
 		if c.Arg == "" {
 			s.OK("")
-			for _, entry := range s.Inbox().Entries() {
+			for _, entry := range s.inbox.Entries() {
 				s.Send("%d %s", entry.Id, entry.Msg.Filename())
 			}
 			s.Send(".")
 			return
 		}
 
-		msg := s.Inbox().FindEntryByID(c.Arg)
+		msg := s.inbox.FindEntryByID(c.Arg)
 		if msg == nil {
 			s.Err("no such message")
 			return
@@ -186,7 +208,7 @@ func init() {
 	/*
 	 * TOP <msg> <n>
 	 */
-	popCmd("TOP", func(s Session, c *Command) {
+	popCmd("TOP", func(s *session, c *Command) {
 
 		var n int
 		var id string
@@ -196,7 +218,7 @@ func init() {
 			return
 		}
 
-		entry := s.Inbox().FindEntryByID(id)
+		entry := s.inbox.FindEntryByID(id)
 		if entry == nil {
 			s.Err("No such message")
 			return
@@ -237,13 +259,13 @@ func init() {
 		s.Send(".")
 	})
 
-	popCmd("RPOP", func(s Session, c *Command) {
+	popCmd("RPOP", func(s *session, c *Command) {
 		s.Err("How such a command got into the RFC at all?")
 	})
 }
 
-func checkAuth(s Session) bool {
-	if s.Inbox() == nil {
+func checkAuth(s *session) bool {
+	if s.inbox == nil {
 		s.Err("Unauthorized")
 		return false
 	}
