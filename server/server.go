@@ -24,8 +24,8 @@ func (s *Server) Run() {
 		log.Fatal(err)
 	}
 
-	go s.smtp()
-	go s.pop()
+	go runSMTP(s.config)
+	go runPOP(s.config)
 }
 
 func createDir(path string) error {
@@ -36,12 +36,12 @@ func createDir(path string) error {
 	return os.MkdirAll(path, 0755)
 }
 
-func (s *Server) pop() error {
-	ln, err := net.Listen("tcp", s.config.Pop)
+func runPOP(config *Config) error {
+	ln, err := net.Listen("tcp", config.Pop)
 	if err != nil {
 		return err
 	}
-	log.Printf("POP: listening on %s\n", s.config.Pop)
+	log.Printf("POP: listening on %s\n", config.Pop)
 	defer ln.Close()
 	for {
 		conn, err := ln.Accept()
@@ -51,19 +51,19 @@ func (s *Server) pop() error {
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go func() {
-			processPOP(conn, s)
+			processPOP(conn, config)
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()
 	}
 }
 
-func (s *Server) smtp() error {
-	ln, err := net.Listen("tcp", s.config.Smtp)
+func runSMTP(config *Config) error {
+	ln, err := net.Listen("tcp", config.Smtp)
 	if err != nil {
 		return err
 	}
-	log.Printf("SMTP: listening on %s\n", s.config.Smtp)
+	log.Printf("SMTP: listening on %s\n", config.Smtp)
 	defer ln.Close()
 	for {
 		conn, err := ln.Accept()
@@ -73,7 +73,7 @@ func (s *Server) smtp() error {
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go func() {
-			processSMTP(conn, s)
+			processSMTP(conn, config)
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()

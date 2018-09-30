@@ -12,15 +12,15 @@ import (
  */
 type popState struct {
 	userName string
-	server   *Server
+	config   *Config
 	inbox    *pop.InboxView
 	*pop.ReadWriter
 }
 
-func newPopSession(c net.Conn, server *Server) *popState {
+func newPopSession(c net.Conn, config *Config) *popState {
 	s := new(popState)
 	s.ReadWriter = pop.NewReadWriter(c)
-	s.server = server
+	s.config = config
 	return s
 }
 
@@ -29,11 +29,11 @@ func (s *popState) open(username, password string) error {
 		return errors.New("Session already started")
 	}
 
-	user := s.server.config.findUser(username, password)
+	user := s.config.findUser(username, password)
 	if user == nil {
 		return errors.New("auth failed")
 	}
-	box, err := s.server.config.mailbox(user)
+	box, err := s.config.mailbox(user)
 	if err != nil {
 		return err
 	}

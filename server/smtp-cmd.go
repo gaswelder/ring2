@@ -140,13 +140,13 @@ func init() {
 			return
 		}
 
-		if !strings.EqualFold(path.Addr.Host, s.server.config.Hostname) {
+		if !strings.EqualFold(path.Addr.Host, s.config.Hostname) {
 			s.Send(550, "Not a local address")
 			return
 		}
 
-		_, ok1 := s.server.config.Lists[path.Addr.Name]
-		_, ok2 := s.server.config.Users[path.Addr.Name]
+		_, ok1 := s.config.Lists[path.Addr.Name]
+		_, ok2 := s.config.Users[path.Addr.Name]
 		if !ok1 && !ok2 {
 			s.Send(550, "Unknown Recipient: "+path.Addr.Format())
 			return
@@ -177,7 +177,7 @@ func init() {
 		 * Example: Received: from GHI.ARPA by JKL.ARPA ; 27 Oct 81 15:27:39 PST
 		 */
 		text := fmt.Sprintf("Received: from %s by %s ; %s\r\n",
-			s.senderHost, s.server.config.Hostname, formatDate())
+			s.senderHost, s.config.Hostname, formatDate())
 
 		/*
 		 * Read the message
@@ -204,7 +204,7 @@ func init() {
 			text += line
 		}
 
-		if processMessage(s.draft, text, s.server.config) {
+		if processMessage(s.draft, text, s.config) {
 			s.Send(250, "OK")
 		} else {
 			s.Send(554, "Transaction failed")
@@ -234,7 +234,7 @@ func init() {
 			return
 		}
 
-		user, smtpErr := plainAuth(parts[1], s.server)
+		user, smtpErr := plainAuth(parts[1], s.config)
 		if smtpErr != nil {
 			s.Send(smtpErr.code, smtpErr.message)
 			return
@@ -255,7 +255,7 @@ type smtpError struct {
 	message string
 }
 
-func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
+func plainAuth(arg string, config *Config) (*UserRec, *smtpError) {
 	// AGdhcwAxMjM= -> \0user\0pass
 	data, err := base64.StdEncoding.DecodeString(arg)
 	if err != nil {
@@ -269,7 +269,7 @@ func plainAuth(arg string, server *Server) (*UserRec, *smtpError) {
 
 	login := parts[1]
 	pass := parts[2]
-	return server.config.findUser(login, pass), nil
+	return config.findUser(login, pass), nil
 }
 
 /*

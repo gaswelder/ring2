@@ -7,9 +7,9 @@ import (
 	"github.com/gaswelder/ring2/server/smtp"
 )
 
-func processSMTP(conn net.Conn, server *Server) {
-	s := newSession(conn, server)
-	s.Send(220, "%s ready", server.config.Hostname)
+func processSMTP(conn net.Conn, config *Config) {
+	s := newSession(conn, config)
+	s.Send(220, "%s ready", config.Hostname)
 
 	/*
 	 * Go allows to organize the processing in a linear manner, but the
@@ -49,12 +49,12 @@ type session struct {
 	senderHost string
 	draft      *smtp.Mail
 	user       *UserRec
-	server     *Server
+	config     *Config
 }
 
-func newSession(conn net.Conn, server *Server) *session {
+func newSession(conn net.Conn, config *Config) *session {
 	s := new(session)
 	s.ReadWriter = smtp.NewWriter(conn)
-	s.server = server
+	s.config = config
 	return s
 }

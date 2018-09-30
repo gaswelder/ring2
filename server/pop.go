@@ -6,8 +6,8 @@ import (
 	"net"
 )
 
-func processPOP(conn net.Conn, server *Server) {
-	s := newPopSession(conn, server)
+func processPOP(conn net.Conn, config *Config) {
+	s := newPopSession(conn, config)
 	s.OK("Hello")
 
 	for {
