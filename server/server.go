@@ -8,6 +8,7 @@ import (
 
 	"github.com/gaswelder/ring2/server/mailbox"
 	"github.com/gaswelder/ring2/server/pop"
+	"github.com/gaswelder/ring2/server/smtp"
 )
 
 type Server struct {
@@ -79,6 +80,43 @@ func runSMTP(config *Config) error {
 	}
 	log.Printf("SMTP: listening on %s\n", config.Smtp)
 	defer ln.Close()
+
+	auth := func(name, password string) error {
+		u := config.findUser(name, password)
+		if u != nil {
+			return nil
+		}
+		return errors.New("Invalid authorization data")
+	}
+
+	getbox := func(name string) ([]*mailbox.Mailbox, error) {
+		boxes := make([]*mailbox.Mailbox, 0)
+
+		list, _ := config.Lists[name]
+		if list != nil {
+			for _, user := range list {
+				box, err := config.mailbox(user)
+				if err != nil {
+					return nil, err
+				}
+				boxes = append(boxes, box)
+			}
+			return boxes, nil
+		}
+
+		user, ok := config.Users[name]
+		if ok {
+			box, err := config.mailbox(user)
+			if err != nil {
+				return nil, err
+			}
+			boxes = append(boxes, box)
+			return boxes, nil
+
+		}
+		return nil, errors.New("unknown recipient")
+	}
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -87,7 +125,7 @@ func runSMTP(config *Config) error {
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
 		go func() {
-			processSMTP(conn, config)
+			smtp.Process(conn, auth, getbox)
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()

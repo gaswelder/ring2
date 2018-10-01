@@ -27,6 +27,10 @@ func New(path string) (*Mailbox, error) {
 	return box, nil
 }
 
+func (b *Mailbox) Name() string {
+	return b.path
+}
+
 // Machinery to sort FileInfo arrays
 type kludge []os.FileInfo
 
