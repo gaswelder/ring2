@@ -59,15 +59,6 @@ func Process(conn io.ReadWriter, auth AuthFunc, lookup MailboxLookupFunc) {
 	}
 	s.Send(220, "%s ready", hostname)
 
-	/*
-	 * Go allows to organize the processing in a linear manner, but the
-	 * SMTP standard was written around implementations of that time
-	 * which maintained explicit state and thus allowed different
-	 * commands like "HELP" to be issued out of context.
-	 *
-	 * Therefore we read commands here and dispatch them to separate
-	 * command functions, passing them a pointer to the current state.
-	 */
 	for {
 		cmd, err := s.ReadCommand()
 		if err == io.EOF {
