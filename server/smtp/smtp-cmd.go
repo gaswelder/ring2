@@ -11,39 +11,6 @@ import (
 	"github.com/gaswelder/ring2/scanner"
 )
 
-type cmdFunc func(s *session, cmd *Command)
-
-var commands = map[string]cmdFunc{
-	"HELO": cmdHelo,
-	"EHLO": cmdEhlo,
-	"RSET": cmdRset,
-	"MAIL": cmdMail,
-	"RCPT": cmdRcpt,
-	"DATA": cmdData,
-}
-
-// Extensions are registered separately because they are listed
-// by the EHLO command.
-var smtpExts = map[string]cmdFunc{
-	"HELP": cmdHelp,
-	"AUTH": cmdAuth,
-}
-
-/*
- * Call the corresponding function to process a command
- */
-func processCmd(s *session, cmd *Command) bool {
-	f, ok := commands[cmd.Name]
-	if !ok {
-		f, ok = smtpExts[cmd.Name]
-	}
-	if !ok {
-		return false
-	}
-	f(s, cmd)
-	return true
-}
-
 /*
  * HELO <host>
  */

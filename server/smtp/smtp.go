@@ -8,6 +8,24 @@ import (
 	"github.com/gaswelder/ring2/server/mailbox"
 )
 
+type cmdFunc func(s *session, cmd *Command)
+
+var commands = map[string]cmdFunc{
+	"HELO": cmdHelo,
+	"EHLO": cmdEhlo,
+	"RSET": cmdRset,
+	"MAIL": cmdMail,
+	"RCPT": cmdRcpt,
+	"DATA": cmdData,
+}
+
+// Extensions are registered separately because they are listed
+// by the EHLO command.
+var smtpExts = map[string]cmdFunc{
+	"HELP": cmdHelp,
+	"AUTH": cmdAuth,
+}
+
 const AuthOK = 235
 const ParameterSyntaxError = 501
 const BadSequenceOfCommands = 503
@@ -65,8 +83,14 @@ func Process(conn io.ReadWriter, auth AuthFunc, lookup MailboxLookupFunc) {
 			break
 		}
 
-		if !processCmd(s, cmd) {
-			s.Send(500, "Unknown command")
+		f, ok := commands[cmd.Name]
+		if !ok {
+			f, ok = smtpExts[cmd.Name]
 		}
+		if !ok {
+			s.Send(500, "Unknown command")
+			continue
+		}
+		f(s, cmd)
 	}
 }
