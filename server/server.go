@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -22,8 +23,6 @@ func New(config *Config) *Server {
 }
 
 func (s *Server) Run() {
-	debugLog = s.config.Debug
-
 	err := createDir(s.config.Maildir)
 	if err != nil {
 		log.Fatal(err)
@@ -65,8 +64,12 @@ func runPOP(config *Config) error {
 			continue
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
+		var rw io.ReadWriter = conn
+		if config.Debug {
+			rw = &tap{rw}
+		}
 		go func() {
-			pop.Process(conn, auth(config))
+			pop.Process(rw, auth(config))
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()
@@ -124,10 +127,32 @@ func runSMTP(config *Config) error {
 			continue
 		}
 		log.Printf("%s connected\n", conn.RemoteAddr().String())
+		var rw io.ReadWriter = conn
+		if config.Debug {
+			rw = &tap{rw}
+		}
 		go func() {
-			smtp.Process(conn, auth, getbox)
+			smtp.Process(rw, auth, getbox)
 			conn.Close()
 			log.Printf("%s disconnected\n", conn.RemoteAddr().String())
 		}()
 	}
+}
+
+type tap struct {
+	rw io.ReadWriter
+}
+
+func (t *tap) Read(p []byte) (n int, err error) {
+	n, err = t.rw.Read(p)
+	if err == nil {
+		os.Stderr.WriteString("> " + string(p[:n]))
+	}
+	return n, err
+}
+
+func (t *tap) Write(p []byte) (n int, err error) {
+	n, err = t.rw.Write(p)
+	os.Stderr.WriteString("< " + string(p[:n]))
+	return n, err
 }

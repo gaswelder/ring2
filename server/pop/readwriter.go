@@ -21,7 +21,6 @@ func makeReadWriter(c io.ReadWriter) *readWriter {
 
 func (rw *readWriter) readCommand() (*command, error) {
 	line, err := rw.reader.ReadString('\n')
-	// debMsg(line)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,6 @@ func (rw *readWriter) Err(comment string) {
 // Send a line
 func (rw *readWriter) Send(format string, args ...interface{}) error {
 	line := fmt.Sprintf(format+"\r\n", args...)
-	// debMsg("pop send: %s", line)
 	_, err := rw.writer.Write([]byte(line))
 	return err
 }
