@@ -9,6 +9,23 @@ import (
 
 type AuthFunc func(name, password string) (*mailbox.Mailbox, error)
 
+type popfunc func(s *session, c *command)
+
+var popFuncs = map[string]popfunc{
+	"USER": cmdUser,
+	"PASS": cmdPass,
+	"STAT": cmdStat,
+	"LIST": cmdList,
+	"RETR": cmdRetr,
+	"DELE": cmdDele,
+	"NOOP": cmdNoop,
+	"LAST": cmdLast,
+	"RSET": cmdRset,
+	// Optional
+	"UIDL": cmdUidl,
+	"TOP":  cmdTop,
+}
+
 func Process(conn io.ReadWriter, auth AuthFunc) {
 	s := makeSession(conn, auth)
 	s.OK("Hello")
