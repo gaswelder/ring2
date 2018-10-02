@@ -3,6 +3,7 @@ package pop
 import (
 	"io"
 	"log"
+	"strings"
 
 	"github.com/gaswelder/ring2/server/mailbox"
 )
@@ -39,7 +40,7 @@ func Process(conn io.ReadWriter, auth AuthFunc) {
 			continue
 		}
 
-		if cmd.name == "QUIT" {
+		if strings.ToUpper(cmd.name) == "QUIT" {
 			if s.inbox == nil {
 				s.OK("")
 				break
@@ -55,7 +56,7 @@ func Process(conn io.ReadWriter, auth AuthFunc) {
 			break
 		}
 
-		cmdfunc, ok := popFuncs[cmd.name]
+		cmdfunc, ok := popFuncs[strings.ToUpper(cmd.name)]
 		if !ok {
 			s.Err("Unknown command")
 			continue

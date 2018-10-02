@@ -18,14 +18,15 @@ type command struct {
  * Parse a command line
  */
 func parseCommand(line string) (*command, error) {
-	var err error
 	var name, arg string
-
 	r := scanner.New(line)
 
 	// Command name: a sequence of ASCII alphabetic characters.
 	for isAlpha(r.Next()) {
-		name += string(toUpper(r.Get()))
+		name += string(r.Get())
+	}
+	if name == "" {
+		return nil, errors.New("command name expected")
 	}
 
 	// If space follows, read the argument
@@ -38,11 +39,7 @@ func parseCommand(line string) (*command, error) {
 
 	// Expect "\r\n"
 	if r.Get() != '\r' || r.Get() != '\n' {
-		err = errors.New("<CRLF> expected")
-	}
-
-	if err != nil {
-		return nil, err
+		return nil, errors.New("<CRLF> expected")
 	}
 
 	return &command{name, arg}, nil
@@ -50,11 +47,4 @@ func parseCommand(line string) (*command, error) {
 
 func isAlpha(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-}
-
-func toUpper(c byte) byte {
-	if c >= 'a' && c <= 'z' {
-		c -= 'a' - 'A'
-	}
-	return c
 }
