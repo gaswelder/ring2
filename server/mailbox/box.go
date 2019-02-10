@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -105,11 +106,13 @@ func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 }
 
 func (b *Mailbox) Remove(msg *Message) error {
+	log.Printf("Deleting message %s", msg.filename)
 	return os.Remove(b.path + "/" + msg.filename)
 }
 
 func (b *Mailbox) Add(text string) error {
 	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
+	log.Printf("Saving message %s", name)
 	return b.writeFile(name, text)
 }
 

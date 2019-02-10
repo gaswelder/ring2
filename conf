@@ -3,7 +3,7 @@ server {
 	pop :11000
 	maildir ./mail
 	hostname localhost
-	debug
+	# debug
 }
 
 lists {
