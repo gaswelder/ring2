@@ -109,6 +109,7 @@ func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 
 // SetLast sets the mailbox's "last retrieved message" pointer to the given message.
 func (b *Mailbox) SetLast(msg *Message) {
+	log.Printf("Setting last message to %s", msg.filename)
 	b.writeFile("last", msg.filename)
 }
 

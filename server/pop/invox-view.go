@@ -2,7 +2,6 @@ package pop
 
 import (
 	"errors"
-	"log"
 	"strconv"
 
 	"github.com/gaswelder/ring2/server/mailbox"
@@ -35,7 +34,6 @@ func makeInboxView(box *mailbox.Mailbox) (*inboxView, error) {
 	messageList := make([]*popMessageEntry, 0)
 	for _, msg := range ls {
 		id++
-		log.Println(id, msg)
 		messageList = append(messageList, &popMessageEntry{
 			id:      id,
 			msg:     msg,
