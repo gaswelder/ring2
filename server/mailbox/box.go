@@ -28,6 +28,7 @@ func New(path string) (*Mailbox, error) {
 	return box, nil
 }
 
+// Name returns the name of the mailbox for logging purposes.
 func (b *Mailbox) Name() string {
 	return b.path
 }
@@ -43,7 +44,7 @@ func (a kludge) Less(i, j int) bool {
 
 // List returns a list of messages stored in this mailbox.
 func (b *Mailbox) List() ([]*Message, error) {
-	// If the directory doesn't exist, we assume that this mailbox simple
+	// If the directory doesn't exist, we assume that this mailbox simply
 	// haven't been written to, and return an empty list.
 	_, err := os.Stat(b.path)
 	if os.IsNotExist(err) {
@@ -85,6 +86,7 @@ func (b *Mailbox) List() ([]*Message, error) {
 	return messages, nil
 }
 
+// LastRetrievedMessage returns the message marked as "last retrieved".
 func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 	lastName, err := b.readFile("last")
 	if os.IsNotExist(err) {
@@ -105,11 +107,18 @@ func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 	return m, nil
 }
 
+// SetLast sets the mailbox's "last retrieved message" pointer to the given message.
+func (b *Mailbox) SetLast(msg *Message) {
+	b.writeFile("last", msg.filename)
+}
+
+// Remove removes the given message from the mailbox.
 func (b *Mailbox) Remove(msg *Message) error {
 	log.Printf("Deleting message %s", msg.filename)
 	return os.Remove(b.path + "/" + msg.filename)
 }
 
+// Add creates a new message from the given text and saves it to the mailbox.
 func (b *Mailbox) Add(text string) error {
 	name := time.Now().Format("20060102-150405-") + fmt.Sprintf("%x", md5.Sum([]byte(text)))
 	log.Printf("Saving message %s", name)
@@ -134,11 +143,6 @@ func (b *Mailbox) writeFile(name string, data string) error {
 	}
 	path := b.path + "/" + name
 	return ioutil.WriteFile(path, []byte(data), 0600)
-}
-
-// Update the 'last' to point to the message with the given id
-func (b *Mailbox) SetLast(msg *Message) {
-	b.writeFile("last", msg.filename)
 }
 
 func createDir(path string) error {
