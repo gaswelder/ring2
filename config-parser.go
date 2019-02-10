@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gaswelder/cfg"
+	"github.com/gaswelder/ring2/cfg"
 	"github.com/gaswelder/ring2/scanner"
 	"github.com/gaswelder/ring2/server"
 )
@@ -45,8 +45,8 @@ func readConfig(path string) (*server.Config, error) {
 	sec, ok = conf["lists"]
 	if ok {
 		for key, val := range sec {
-			if val != "" {
-				return nil, fmt.Errorf("Unexpected argument: %s %s", key, val)
+			if val != "true" {
+				return nil, fmt.Errorf("Unexpected argument to the maillist '%s': %s", key, val)
 			}
 			cnf.Lists[key] = make([]*server.UserRec, 0)
 		}
