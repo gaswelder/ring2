@@ -97,6 +97,11 @@ func (b *Mailbox) LastRetrievedMessage() (*Message, error) {
 	}
 
 	stat, err := os.Stat(b.path + "/" + lastName)
+	// It's possible that the "last retrieved" mail has been deleted from the server.
+	// In that case behave as if no last retrieved mail were defined.
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
