@@ -7,10 +7,9 @@ import (
 	"github.com/gaswelder/ring2/server/mailbox"
 )
 
-// popMessageEntry represents a message entry used
-// in a POP session. It contains a cached message entry
-// from the mailbox plus session-related data like ID
-// and the `deleted` flag.
+// popMessageEntry represents a message entry used in a POP session.
+// It contains a message entry from the mailbox plus session data like
+// message ID and the `deleted` flag.
 type popMessageEntry struct {
 	id      int
 	msg     *mailbox.Message
@@ -20,7 +19,8 @@ type popMessageEntry struct {
 type inboxView struct {
 	box         *mailbox.Mailbox
 	messageList []*popMessageEntry
-	lastID      int
+	// Session id of the "last" message.
+	lastID int
 }
 
 func makeInboxView(box *mailbox.Mailbox) (*inboxView, error) {
@@ -46,30 +46,30 @@ func makeInboxView(box *mailbox.Mailbox) (*inboxView, error) {
 		messageList: messageList,
 	}
 
-	err = v.resetLastID()
+	lastID, err := v.originalLastID()
 	if err != nil {
 		return nil, err
 	}
-
+	v.lastID = lastID
 	return v, nil
 }
 
-func (v *inboxView) resetLastID() error {
+// Returns current session ID of the message marked as "last"
+// in the mailbox.
+func (v *inboxView) originalLastID() (int, error) {
 	last, err := v.box.LastRetrievedMessage()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if last == nil {
-		v.lastID = 0
-		return nil
+		return 0, nil
 	}
 	for _, entry := range v.messageList {
 		if entry.msg.Filename() == last.Filename() {
-			v.lastID = entry.id
-			return nil
+			return entry.id, nil
 		}
 	}
-	return errors.New("failed to find the lastID message")
+	return 0, errors.New("failed to find the lastID message")
 }
 
 func (v *inboxView) entries() []*popMessageEntry {
@@ -81,15 +81,6 @@ func (v *inboxView) entries() []*popMessageEntry {
 		list = append(list, msg)
 	}
 	return list
-}
-
-func (v *inboxView) reset() error {
-	// Reset all deleted flags
-	for _, entry := range v.messageList {
-		entry.deleted = false
-	}
-	err := v.resetLastID()
-	return err
 }
 
 func (v *inboxView) markRetrieved(entry *popMessageEntry) {
@@ -123,6 +114,22 @@ func (v *inboxView) markDeleted(msgid string) error {
 	return nil
 }
 
+// Resets all 'deleted' flags and sets the last message
+// pointer to the original value.
+func (v *inboxView) reset() error {
+	for _, entry := range v.messageList {
+		entry.deleted = false
+	}
+	id, err := v.originalLastID()
+	if err != nil {
+		return err
+	}
+	v.lastID = id
+	return nil
+}
+
+// Deletes all messages marked to be deleted and saves
+// the new last message value.
 func (v *inboxView) commit() error {
 	if v.box == nil {
 		return nil
